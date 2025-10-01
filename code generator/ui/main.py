@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-UI Tkinter para gerar config.json a partir de um mapeamento de pinos (STM32G474xx),
-e agora também acionar o pipeline de geração (.c/.h) via um botão "Gerar .c/.h".
 
-Requisitos: Python 3.x (tkinter padrão), sem libs externas.
-Coloque este arquivo e o seu generate_all.py na mesma pasta.
-"""
 
 import json
 import importlib
