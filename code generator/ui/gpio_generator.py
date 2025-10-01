@@ -7,9 +7,10 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 THIS = Path(__file__).resolve()               # .../TCCV02/code generator/gpio_generator.py
 GEN_DIR = THIS.parent                         # .../TCCV02/code generator
-PROJ_ROOT = GEN_DIR.parent                    # .../TCCV02
-
-# Paths de templates (PELO SEU PRINT ficam dentro de "code generator/ui/inc|src")
+PROJ_ROOT = GEN_DIR.parent.parent                    # .../TCCV02
+print("alou")
+print(PROJ_ROOT)
+# Paths de templates 
 TPL_DIR_INC = GEN_DIR /  "inc"
 TPL_DIR_SRC = GEN_DIR /  "src"
 
