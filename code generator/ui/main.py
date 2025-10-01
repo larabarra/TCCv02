@@ -10,11 +10,11 @@ from tkinter import ttk, filedialog, messagebox
 # ==================== PRESETS DE INSTÂNCIAS (ajuste conforme seu MCU/placa) ====================
 INSTANCE_PRESETS = {
     "GPIO":   [],
-    "I2C":    ["I2C1", "I2C2", "I2C3", "I2C4", "Custom…"],
-    "USART":  ["USART1", "USART2", "USART3", "UART4", "UART5", "LPUART1", "Custom…"],
-    "SPI":    ["SPI1", "SPI2", "SPI3", "Custom…"],
-    "TIMER":  ["TIM1", "TIM2", "TIM3", "TIM4", "TIM6", "TIM7", "TIM15", "TIM16", "TIM17", "HRTIM1", "Custom…"],
-    "ADC":    ["ADC1", "ADC2", "ADC3", "ADC4", "ADC5", "Custom…"],
+    "I2C":    ["I2C1", "I2C2", "I2C3", "I2C4"],
+    "USART":  ["USART1", "USART2", "USART3", "UART4", "UART5", "LPUART1"],
+    "SPI":    ["SPI1", "SPI2", "SPI3"],
+    "TIMER":  ["TIM1", "TIM2", "TIM3", "TIM4", "TIM6", "TIM7", "TIM15", "TIM16", "TIM17", "HRTIM1"],
+    "ADC":    ["ADC1", "ADC2", "ADC3", "ADC4", "ADC5"],
 }
 DEFAULT_TYPES = ["GPIO", "I2C", "USART", "SPI", "TIMER", "ADC"]
 

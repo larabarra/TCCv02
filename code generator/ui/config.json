@@ -1,36 +1,28 @@
 {
-  "project_name": "TESTE",
+  "project_name": "AAAA",
   "microcontroller": "STM32G474RE",
   "peripherals": [
     {
-      "type": "GPIO",
+      "type": "I2C",
+      "instance": "I2C1",
       "pins": [
         {
-          "name": "LED_1",
-          "port": "GPIOA",
-          "pin": 3,
-          "mode": "INPUT",
-          "pull": "NOPULL",
-          "speed": "LOW",
-          "alternate_fn": 0
-        },
-        {
-          "name": "LED_2",
-          "port": "GPIOA",
-          "pin": 4,
-          "mode": "OUTPUT_PP",
-          "pull": "NOPULL",
-          "speed": "LOW",
-          "alternate_fn": 0
-        },
-        {
-          "name": "LED_3",
+          "name": "SENSOR_TEMPERATURA",
           "port": "GPIOB",
-          "pin": 0,
+          "pin": 8,
           "mode": "OUTPUT_OD",
-          "pull": "NOPULL",
-          "speed": "LOW",
-          "alternate_fn": 0
+          "pull": "PULLUP",
+          "speed": "HIGH",
+          "alternate_fn": 4
+        },
+        {
+          "name": "SENSOR_TEMPERATURA_SDA",
+          "port": "GPIOB",
+          "pin": 9,
+          "mode": "OUTPUT_OD",
+          "pull": "PULLUP",
+          "speed": "HIGH",
+          "alternate_fn": 9
         }
       ]
     }
