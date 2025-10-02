@@ -7,22 +7,46 @@
       "instance": "I2C1",
       "pins": [
         {
-          "name": "SENSOR_TEMPERATURA",
+          "name": "I2C1_SCL",
           "port": "GPIOB",
-          "pin": 8,
-          "mode": "OUTPUT_OD",
+          "pin": 6,
+          "mode": "AF_OD",
           "pull": "PULLUP",
-          "speed": "HIGH",
+          "speed": "VERY_HIGH",
           "alternate_fn": 4
         },
         {
-          "name": "SENSOR_TEMPERATURA_SDA",
+          "name": "I2C1_SDA",
           "port": "GPIOB",
-          "pin": 9,
-          "mode": "OUTPUT_OD",
+          "pin": 7,
+          "mode": "AF_OD",
           "pull": "PULLUP",
-          "speed": "HIGH",
-          "alternate_fn": 9
+          "speed": "VERY_HIGH",
+          "alternate_fn": 4
+        }
+      ]
+    },
+    {
+      "type": "I2C",
+      "instance": "I2C2",
+      "pins": [
+        {
+          "name": "I2C2_SCL",
+          "port": "GPIOB",
+          "pin": 10,
+          "mode": "AF_OD",
+          "pull": "PULLUP",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 4
+        },
+        {
+          "name": "I2C2_SDA",
+          "port": "GPIOB",
+          "pin": 11,
+          "mode": "AF_OD",
+          "pull": "PULLUP",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 4
         }
       ]
     }
