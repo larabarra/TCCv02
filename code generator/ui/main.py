@@ -390,7 +390,7 @@ class App(tk.Tk):
                     by_inst.setdefault(key, []).append(x)
                 for inst, lst in by_inst.items():
                     peripherals.append({
-                        "type": t if t!="UART" else "USART",  # padroniza se necessário
+                        "type": t if t!="UART" else "USART", 
                         "instance": inst,
                         "pins": [{ "name": x["name"], "port": x["port"], "pin": x["pin"],
                                    "mode": x["mode"], "pull": x["pull"], "speed": x["speed"],

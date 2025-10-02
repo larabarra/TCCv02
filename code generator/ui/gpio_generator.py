@@ -8,8 +8,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 THIS = Path(__file__).resolve()               # .../TCCV02/code generator/gpio_generator.py
 GEN_DIR = THIS.parent                         # .../TCCV02/code generator
 PROJ_ROOT = GEN_DIR.parent.parent                    # .../TCCV02
-print("alou")
-print(PROJ_ROOT)
+
 # Paths de templates 
 TPL_DIR_INC = GEN_DIR /  "inc"
 TPL_DIR_SRC = GEN_DIR /  "src"
@@ -50,13 +49,15 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 
-def generate_gpio_config(block: dict) -> list[str]:
+def generate_gpio_config(block: list[dict]) -> list[str]:
 
-    pins = block.get("pins", [])
-    if not pins:
-        print("[GPIO] nenhum pino configurado.")
-        return []
-
+    gpio_blocks = block
+    #print(block)
+    pins = []
+    
+    for peripheral_dict in gpio_blocks:
+        pins.extend(peripheral_dict.get("pins", []))
+   
     # Contexto para os templates Jinja
     ctx = {
         "pins": pins,

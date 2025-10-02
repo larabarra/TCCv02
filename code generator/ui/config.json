@@ -3,6 +3,29 @@
   "microcontroller": "STM32G474RE",
   "peripherals": [
     {
+      "type": "GPIO",
+      "pins": [
+        {
+          "name": "PA0",
+          "port": "GPIOA",
+          "pin": 0,
+          "mode": "INPUT",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
+        },
+        {
+          "name": "PA0",
+          "port": "GPIOA",
+          "pin": 4,
+          "mode": "OUTPUT_PP",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
+        }
+      ]
+    },
+    {
       "type": "I2C",
       "instance": "I2C1",
       "pins": [
@@ -31,7 +54,7 @@
       "instance": "I2C2",
       "pins": [
         {
-          "name": "I2C2_SCL",
+          "name": "I2C1_SCL",
           "port": "GPIOB",
           "pin": 10,
           "mode": "AF_OD",
@@ -49,6 +72,68 @@
           "alternate_fn": 4
         }
       ]
-    }
+    },
+    {
+      "type": "USART",
+      "instance": "UART1",
+      "pins": [
+        {
+          "name": "UART1_TX",
+          "port": "GPIOA",
+          "pin": 9,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        },
+        {
+          "name": "UART1_RX",
+          "port": "GPIOA",
+          "pin": 10,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        }
+      ]
+    },
+    {
+      "type": "ADC",
+      "instance": "ADC1",
+      "pins": [
+        {
+          "name": "ADC1_ADC_IN2",
+          "port": "GPIOA",
+          "pin": 3,
+          "mode": "ANALOG",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
+        }
+      ]
+    },
+  {
+      "type": "GPIO",
+      "pins": [
+        {
+          "name": "PB0",
+          "port": "GPIOB",
+          "pin": 12,
+          "mode": "INPUT",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
+        },
+        {
+          "name": "PB0",
+          "port": "GPIOB",
+          "pin": 10,
+          "mode": "OUTPUT_PP",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
+        }
+      ]
+    }  
   ]
 }
