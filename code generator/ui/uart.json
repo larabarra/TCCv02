@@ -1,0 +1,54 @@
+{
+  "project_name": "AAAA",
+  "microcontroller": "STM32G474RE",
+  "peripherals": [
+    {
+      "type": "USART",
+      "instance": "UART1",
+      "pins": [
+        {
+          "name": "UART1_TX",
+          "port": "GPIOA",
+          "pin": 9,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        },
+        {
+          "name": "UART1_RX",
+          "port": "GPIOA",
+          "pin": 10,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        }
+      ]
+    },
+    {
+      "type": "USART",
+      "instance": "UART3",
+      "pins": [
+        {
+          "name": "UART3_TX",
+          "port": "GPIOB",
+          "pin": 10,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        },
+        {
+          "name": "UART3_RX",
+          "port": "GPIOB",
+          "pin": 11,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        }
+      ]
+    }
+  ]
+}

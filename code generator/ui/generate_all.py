@@ -5,13 +5,15 @@ from collections import defaultdict
 # Importa os geradores modularizados
 from gpio_generator import generate_gpio_config
 from i2c_generator import generate_i2c_config
+from uart_generator import generate_uart_config
 # from i2c_generator import generate_i2c_config # Adicione este quando criado
 
 # Dicionário de despacho: Mapeia o 'type' do JSON para a função de geração
 GENERATORS = {
     "GPIO": generate_gpio_config,
     "I2C": generate_i2c_config, 
-    # "UART": generate_uart_config,
+    "USART": generate_uart_config,
+    "UART": generate_uart_config,
 }
 
 def load_config_data(json_file_path):
