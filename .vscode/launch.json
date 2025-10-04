@@ -8,9 +8,7 @@
             "name": "Build & Debug Microcontroller - ST-Link",
             "cwd": "${workspaceFolder}",
             "type": "cortex-debug",
-            "executable": "${command:cmake.launchTargetPath}",
-            // Let CMake extension decide executable: "${command:cmake.launchTargetPath}"
-            // Or fixed file path: "${workspaceFolder}/path/to/filename.elf"
+            "executable": "${workspaceFolder}/build/Debug/TCCv02.elf",
             "request": "launch",
             "servertype": "stlink",
             "device": "STM32G474RETx", //MCU used
@@ -24,9 +22,16 @@
             "stlinkPath": "${config:STM32VSCodeExtension.cubeCLT.path}/STLink-gdb-server/bin/ST-LINK_gdbserver",   
             "armToolchainPath": "${config:STM32VSCodeExtension.cubeCLT.path}/GNU-tools-for-STM32/bin",
             "gdbPath":"${config:STM32VSCodeExtension.cubeCLT.path}/GNU-tools-for-STM32/bin/arm-none-eabi-gdb",            
-            "serverArgs": [
-                "-m","0",
-            ],
+            "serverArgs": ["-m","0",],
+            "postLaunchCommands": [
+            "set confirm off",
+            "skip file */newlib/*",
+            "skip file *\\\\newlib\\\\*",
+            "skip function memset",
+            "skip function memcpy",
+            "skip function memmove",
+            "skip function __aeabi_*",
+            "set confirm on"]
             //"preLaunchTask": "Build + Flash"
             /* If you use external loader, add additional arguments */
             //"serverArgs": ["--extload", "path/to/ext/loader.stldr"],
@@ -35,7 +40,7 @@
             "name": "Attach to Microcontroller - ST-Link",
             "cwd": "${workspaceFolder}",
             "type": "cortex-debug",
-            "executable": "${command:cmake.launchTargetPath}",
+            "executable": "${workspaceFolder}/build/Debug/TCCv02.elf",
             // Let CMake extension decide executable: "${command:cmake.launchTargetPath}"
             // Or fixed file path: "${workspaceFolder}/path/to/filename.elf"
             "request": "attach",

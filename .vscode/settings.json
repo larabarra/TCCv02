@@ -1,15 +1,21 @@
 {
-    "cmake.cmakePath": "cube-cmake",
-    "cmake.configureArgs": [
-        "-DCMAKE_COMMAND=cube-cmake"
-    ],
-    "cmake.preferredGenerators": [
-        "Ninja"
-    ],
-    "stm32cube-ide-clangd.path": "cube",
-    "stm32cube-ide-clangd.arguments": [
-        "starm-clangd",
-        "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/13.3.1+st.9/bin/arm-none-eabi-gcc.exe",
-        "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/13.3.1+st.9/bin/arm-none-eabi-g++.exe"
-    ]
+  "cmake.cmakePath": "C:/ST/STM32CubeCLT_1.19.0/CMake/bin/cmake.exe",
+  "cmake.preferredGenerators": ["Ninja"],
+  "cmake.configureArgs": [],
+
+  // Se quiser garantir o Ninja do CLT:
+  "cmake.configureSettings": {
+    "CMAKE_MAKE_PROGRAM": "C:/ST/STM32CubeCLT_1.19.0/Ninja/bin/ninja.exe",
+    "CMAKE_C_COMPILER": "C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/arm-none-eabi-gcc.exe",
+    "CMAKE_CXX_COMPILER": "C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/arm-none-eabi-g++.exe",
+    "CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY"
+  },
+
+  // Pode manter o clangd da extensão da ST se estiver funcionando pra você
+  "stm32cube-ide-clangd.path": "cube",
+  "stm32cube-ide-clangd.arguments": [
+    "starm-clangd",
+    "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/13.3.1+st.9/bin/arm-none-eabi-gcc.exe",
+    "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/13.3.1+st.9/bin/arm-none-eabi-g++.exe"
+  ]
 }
