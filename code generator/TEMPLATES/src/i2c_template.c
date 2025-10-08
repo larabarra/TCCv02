@@ -50,3 +50,93 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
     }
 {% endfor %}
 }
+
+/*
+ * ----------------------------------------------------------------
+ * --- Application-level Read/Write Functions ---
+ * ----------------------------------------------------------------
+ */
+
+/**
+  * @brief  Writes an amount of data to a specific device on the I2C bus.
+  * @param  hi2c Pointer to a I2C_HandleTypeDef structure.
+  * @param  dev_address Target device address: The device 7-bit address left-shifted.
+  * @param  data Pointer to data buffer.
+  * @param  size Amount of data to be sent.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef I2C_Write(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t *data, uint16_t size)
+{
+    // The template will generate the correct HAL call based on the user's choice in the UI.
+    // This logic assumes that for a given I2C instance, only one transfer mode is used.
+    {% for i2c in i2c_interfaces %}
+    if (hi2c->Instance == {{ i2c.interface }})
+    {
+        {% if i2c.transferMode == 'POLLING' %}
+        return HAL_I2C_Master_Transmit(hi2c, dev_address, data, size, HAL_MAX_DELAY);
+        {% elif i2c.transferMode == 'INTERRUPT' %}
+        return HAL_I2C_Master_Transmit_IT(hi2c, dev_address, data, size);
+        {% elif i2c.transferMode == 'DMA' %}
+        return HAL_I2C_Master_Transmit_DMA(hi2c, dev_address, data, size);
+        {% else %}
+        // Fallback to Polling mode if the selected mode is not recognized.
+        return HAL_I2C_Master_Transmit(hi2c, dev_address, data, size, HAL_MAX_DELAY);
+        {% endif %}
+    }
+    {% endfor %}
+    return HAL_ERROR; // Return error if the handle does not match any initialized interface.
+}
+
+/**
+  * @brief  Reads an amount of data from a specific device on the I2C bus.
+  * @param  hi2c Pointer to a I2C_HandleTypeDef structure.
+  * @param  dev_address Target device address: The device 7-bit address left-shifted.
+  * @param  buffer Pointer to data buffer.
+  * @param  size Amount of data to be received.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef I2C_Read(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t *buffer, uint16_t size)
+{
+    {% for i2c in i2c_interfaces %}
+    if (hi2c->Instance == {{ i2c.interface }})
+    {
+        {% if i2c.transferMode == 'POLLING' %}
+        return HAL_I2C_Master_Receive(hi2c, dev_address, buffer, size, HAL_MAX_DELAY);
+        {% elif i2c.transferMode == 'INTERRUPT' %}
+        return HAL_I2C_Master_Receive_IT(hi2c, dev_address, buffer, size);
+        {% elif i2c.transferMode == 'DMA' %}
+        return HAL_I2C_Master_Receive_DMA(hi2c, dev_address, buffer, size);
+        {% else %}
+        // Fallback to Polling mode if the selected mode is not recognized.
+        return HAL_I2C_Master_Receive(hi2c, dev_address, buffer, size, HAL_MAX_DELAY);
+        {% endif %}
+    }
+    {% endfor %}
+    return HAL_ERROR;
+}
+
+/**
+ * @brief Reads a single byte from a specific register of a slave device.
+ * @note This is a common pattern for many sensors.
+ */
+HAL_StatusTypeDef I2C_Read_Register(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t reg_address, uint8_t *buffer)
+{
+    // First, send the address of the register we want to read.
+    if (HAL_I2C_Master_Transmit(hi2c, dev_address, &reg_address, 1, HAL_MAX_DELAY) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+    // Then, read the value from that register.
+    return HAL_I2C_Master_Receive(hi2c, dev_address, buffer, 1, HAL_MAX_DELAY);
+}
+
+/**
+ * @brief Writes a single byte to a specific register of a slave device.
+ */
+HAL_StatusTypeDef I2C_Write_Register(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t reg_address, uint8_t value)
+{
+    uint8_t data[2];
+    data[0] = reg_address; // The first byte is the register address.
+    data[1] = value;       // The second byte is the value to be written.
+    return HAL_I2C_Master_Transmit(hi2c, dev_address, data, 2, HAL_MAX_DELAY);
+}
