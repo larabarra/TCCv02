@@ -4,6 +4,11 @@
       "clockSpeed": 100000,
       "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
       "transferMode": "POLLING"
+    },
+    "I2C2": {
+      "clockSpeed": 100000,
+      "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
+      "transferMode": "POLLING"
     }
   },
   "UART": {
@@ -12,7 +17,7 @@
       "wordLength": "UART_WORDLENGTH_8B",
       "stopBits": "UART_STOPBITS_1",
       "parity": "UART_PARITY_NONE",
-      "flowControl": "UART_HWCONTROL_RTS_CTS"
+      "flowControl": "UART_HWCONTROL_NONE"
     }
   }
 }
