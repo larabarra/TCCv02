@@ -36,6 +36,15 @@ env = Environment(
     lstrip_blocks=True,    # Strips leading whitespace from a block
 )
 
+# --- Timing Register Map ---
+# Pre-calculated values for STM32G4 series at a typical 100MHz I2CCLK.
+# These values should be adjusted if the system clock changes significantly.
+TIMING_REGISTER_MAP = {
+    100000: "0x30909DEC",  # Standard Mode (100kHz)
+    400000: "0x10B0B0EB",  # Fast Mode (400kHz)
+    1000000: "0x00D0268A", # Fast Mode Plus (1MHz)
+}
+
 def _render_and_save(template_name: str, context: dict, output_path: Path) -> Path:
     """
     Renders a Jinja2 template with the given context and saves it to a file.
@@ -75,9 +84,9 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 
-def generate_i2c_config(i2c_blocks: list[dict]) -> list[str]:
+def generate_i2c_config(i2c_pinout_blocks: list[dict], i2c_settings: dict) -> list[str]:
     """
-    Generates i2c.c and i2c.h files based on a list of I2C configuration blocks.
+    Generates i2c.c and i2c.h files by merging pinout data with peripheral settings.
 
     Args:
         i2c_blocks (list[dict]): A list of dictionaries, where each dictionary
@@ -101,26 +110,29 @@ def generate_i2c_config(i2c_blocks: list[dict]) -> list[str]:
         "VERY_HIGH": "GPIO_SPEED_FREQ_VERY_HIGH",
     }
 
+    print(i2c_pinout_blocks)
+    print(i2c_settings)
+
     # Process each I2C peripheral block from the configuration.
-    for block in i2c_blocks:
+    for block in i2c_pinout_blocks:
         instance = block.get('instance')  # e.g., "I2C1"
         pins_list = block.get('pins', [])
         
         if not instance or not pins_list:
             continue # Skip malformed blocks.
             
+
+        instance_settings = i2c_settings.get(instance, {})
+        if not instance_settings:
+            print(f"WARNING: No peripheral settings found for {instance}. Using defaults.")
+
+
         # Extract the instance number (1, 2, etc.) from the instance name.
         instance_num = int(instance.replace("I2C", ""))
         
         # Identify the SCL and SDA pins from the pins list by checking their name.
-        scl_pin_data = None
-        sda_pin_data = None
-        for pin_data in pins_list:
-            name = pin_data.get('name', '').upper()
-            if 'SCL' in name:
-                scl_pin_data = pin_data
-            elif 'SDA' in name:
-                sda_pin_data = pin_data
+        scl_pin_data = next((p for p in pins_list if 'SCL' in p.get('name', '').upper()), None)
+        sda_pin_data = next((p for p in pins_list if 'SDA' in p.get('name', '').upper()), None)
         
         # Ensure both SCL and SDA pins were found before proceeding.
         if scl_pin_data is None or sda_pin_data is None:
@@ -129,21 +141,27 @@ def generate_i2c_config(i2c_blocks: list[dict]) -> list[str]:
         
         # Build a context dictionary for this specific I2C interface.
         interface_context = {
-            "num": instance_num,              # e.g., 1, 2 (for I2C1, I2C2)
-            "interface": instance,            # e.g., "I2C1" (for hi2c1.Instance = I2C1;)
+            "num": int(instance.replace("I2C", "")),
+            "interface": instance,
             
-            # --- SCL Pin Data ---
-            "scl_port": scl_pin_data['port'][4], # 'GPIOA' -> 'A' (for __HAL_RCC_GPIOA_CLK_ENABLE())
-            "scl_pin_num": scl_pin_data['pin'],     # e.g., 8 (for GPIO_PIN_8)
-            "scl_pull": map_pull[scl_pin_data['pull']],
-            "scl_speed": map_speed[scl_pin_data['speed']],
-            "scl_af": scl_pin_data['alternate_fn'], # e.g., 4 (for GPIO_AF4_I2C1)
-
-            # --- SDA Pin Data ---
-            "sda_port": sda_pin_data['port'][4],
+            # HAL Init settings (from peripheral_settings.json)
+            "timing_reg": TIMING_REGISTER_MAP.get(instance_settings.get("clockSpeed"), "0x30909DEC"), # Default to 100kHz
+            "addressing_mode": instance_settings.get("addressingMode", "I2C_ADDRESSINGMODE_7BIT"),
+            
+            # Default values for other settings
+            "own_address1": "0",
+            "dual_address_mode": "I2C_DUALADDRESS_DISABLE",
+            "own_address2": "0",
+            "own_address2_masks": "I2C_OA2MSK_NOMASK",
+            "general_call_mode": "I2C_GENERALCALL_DISABLE",
+            "no_stretch_mode": "I2C_NOSTRETCH_DISABLE",
+            
+            # Pin data for MSP init (from pinout configuration)
+            "scl_port_char": scl_pin_data['port'][4],
+            "scl_pin_num": scl_pin_data['pin'],
+            "sda_port_char": sda_pin_data['port'][4],
             "sda_pin_num": sda_pin_data['pin'],
-            "sda_pull": map_pull[sda_pin_data['pull']],
-            "sda_speed": map_speed[sda_pin_data['speed']],
+            "scl_af": scl_pin_data['alternate_fn'],
             "sda_af": sda_pin_data['alternate_fn'],
         }
         

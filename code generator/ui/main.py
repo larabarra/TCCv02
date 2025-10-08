@@ -397,26 +397,59 @@ class App(tk.Tk):
             messagebox.showerror("Error During Export", str(e))
 
     def generate_files(self):
-        """Load a config.json file and pass it to the code generator module."""
-        cfg_path = filedialog.askopenfilename(title="Select  config files to generate code", filetypes=[("JSON","*.json"), ("All files","*.*")])
-        if not cfg_path: return
-        try:
-            gen = importlib.import_module("generators.generate_all") 
-        except ImportError as e:
-            messagebox.showerror("Module Not Found", "Place 'generate_all.py' in the same folder.\n\nDetails:\n"+str(e))
+        """
+        Asks the user for a folder, loads the pinout and peripheral configuration
+        files, and passes them to the code generator module.
+        """
+        # 1. Ask the user to select the FOLDER containing the config files.
+        folder_path = filedialog.askdirectory(title="Select Folder Containing Configuration Files")
+        if not folder_path:
             return
+
+        # 2. Construct the full paths to the expected JSON files.
+        pinout_path = os.path.join(folder_path, "pinout_config.json")
+        settings_path = os.path.join(folder_path, "peripheral_settings.json")
+
+        # 3. Load the data from the configuration files.
         try:
-            with open(cfg_path, "r", encoding="utf-8") as f: data = json.load(f)
+            with open(pinout_path, "r", encoding="utf-8") as f:
+                pinout_data = json.load(f)
+        except FileNotFoundError:
+            messagebox.showerror("File Not Found", f"Could not find 'pinout_config.json' in the selected folder.")
+            return
+        except json.JSONDecodeError as e:
+            messagebox.showerror("JSON Error", f"Error parsing 'pinout_config.json':\n{e}")
+            return
+
+        # Load peripheral settings if the file exists; otherwise, use an empty dict.
+        # This is not treated as a fatal error, as a project might only have GPIOs.
+        peripheral_data = {}
+        try:
+            with open(settings_path, "r", encoding="utf-8") as f:
+                peripheral_data = json.load(f)
+        except FileNotFoundError:
+            print("Info: 'peripheral_settings.json' not found. Proceeding without peripheral-specific settings.")
+        except json.JSONDecodeError as e:
+            messagebox.showerror("JSON Error", f"Error parsing 'peripheral_settings.json':\n{e}")
+            return
+
+        # 4. Import the generator module and call the main generation function.
+        try:
+            gen = importlib.import_module("generators.generate_all")
             
-            blocks = data.get("peripherals", [])
             if not hasattr(gen, "generate_project_files"):
                 raise AttributeError("Function 'generate_project_files' not found in generate_all.py")
                 
-            out_files = gen.generate_project_files(blocks)
+            # 5. Call the function with BOTH configuration dictionaries.
+            out_files = gen.generate_project_files(pinout_data, peripheral_data)
+            
             if out_files:
                 messagebox.showinfo("Generation Complete", "Generated files:\n\n" + "\n".join(out_files))
             else:
                 messagebox.showinfo("Generation Complete", "No files were reported. Check the console/log.")
+                
+        except ImportError as e:
+            messagebox.showerror("Module Not Found", "Could not find the 'generators' module.\n\nDetails:\n"+str(e))
         except Exception as e:
             messagebox.showerror("Generation Error", str(e))
 
