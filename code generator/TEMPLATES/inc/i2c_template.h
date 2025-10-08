@@ -32,6 +32,12 @@ extern I2C_HandleTypeDef hi2c{{ i2c.num }};
 /* --- Function Prototypes --- */
 void MX_I2C_Init(void);
 
+/* --- Application-level Functions --- */
+HAL_StatusTypeDef I2C_Write(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t *data, uint16_t size);
+HAL_StatusTypeDef I2C_Read(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t *buffer, uint16_t size);
+HAL_StatusTypeDef I2C_Read_Register(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t reg_address, uint8_t *buffer);
+HAL_StatusTypeDef I2C_Write_Register(I2C_HandleTypeDef *hi2c, uint16_t dev_address, uint8_t reg_address, uint8_t value);
+
 
 #ifdef __cplusplus
 }

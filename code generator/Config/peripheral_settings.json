@@ -6,10 +6,23 @@
       "transferMode": "POLLING",
       "devices": [
         {
-          "name": "TEMP_SENSOR",
+          "name": "I2C_DISPLAY",
           "address": 74
+        },
+        {
+          "name": "I2C_SENSOR",
+          "address": 24
         }
       ]
+    }
+  },
+  "UART": {
+    "UART1": {
+      "baudRate": 115200,
+      "wordLength": "UART_WORDLENGTH_8B",
+      "stopBits": "UART_STOPBITS_1",
+      "parity": "UART_PARITY_EVEN",
+      "flowControl": "UART_HWCONTROL_RTS_CTS"
     }
   }
 }

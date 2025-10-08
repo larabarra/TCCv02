@@ -133,6 +133,7 @@ def generate_i2c_config(i2c_pinout_blocks: list[dict], i2c_settings: dict) -> li
             "addressing_mode": instance_settings.get("addressingMode", "I2C_ADDRESSINGMODE_7BIT"),
             "devices": processed_devices, # Use the pre-processed list.
             "dual_address_mode": "I2C_DUALADDRESS_DISABLE",
+            "transferMode": instance_settings.get("transferMode", "POLLING"),
             "own_address1": "0",
             "own_address2": "0",
             "own_address2_masks": "I2C_OA2MSK_NOMASK",

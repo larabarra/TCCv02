@@ -1,5 +1,5 @@
 {
-  "project_name": "MyProject",
+  "project_name": "Texte_Projectp",
   "microcontroller": "STM32G474RE",
   "peripherals": [
     {
@@ -23,6 +23,53 @@
           "pull": "PULLUP",
           "speed": "VERY_HIGH",
           "alternate_fn": 4
+        }
+      ]
+    },
+    {
+      "type": "USART",
+      "instance": "UART1",
+      "pins": [
+        {
+          "name": "UART1_TX",
+          "port": "GPIOA",
+          "pin": 9,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        },
+        {
+          "name": "UART1_RX",
+          "port": "GPIOA",
+          "pin": 10,
+          "mode": "AF_PP",
+          "pull": "NOPULL",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 7
+        }
+      ]
+    },
+    {
+      "type": "GPIO",
+      "pins": [
+        {
+          "name": "LED_EXEMPLE",
+          "port": "GPIOA",
+          "pin": 0,
+          "mode": "OUTPUT_PP",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
+        },
+        {
+          "name": "READ_DIGITAL_DATA",
+          "port": "GPIOA",
+          "pin": 2,
+          "mode": "INPUT",
+          "pull": "NOPULL",
+          "speed": "LOW",
+          "alternate_fn": 0
         }
       ]
     }
