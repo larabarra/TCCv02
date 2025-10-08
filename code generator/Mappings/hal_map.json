@@ -1,0 +1,32 @@
+{
+  "I2C": {
+    "clockSpeed": {
+      "100 kHz (Standard)": 100000,
+      "400 kHz (Fast)": 400000,
+      "1 MHz (Fast+)": 1000000
+    },
+    "addressingMode": {
+      "7-bit": "I2C_ADDRESSINGMODE_7BIT",
+      "10-bit": "I2C_ADDRESSINGMODE_10BIT"
+    }
+  },
+  "UART": {
+    "wordLength": {
+      "8 Bits": "UART_WORDLENGTH_8B",
+      "9 Bits": "UART_WORDLENGTH_9B"
+    },
+    "stopBits": {
+      "1": "UART_STOPBITS_1",
+      "2": "UART_STOPBITS_2"
+    },
+    "parity": {
+      "None": "UART_PARITY_NONE",
+      "Even": "UART_PARITY_EVEN",
+      "Odd": "UART_PARITY_ODD"
+    },
+    "flowControl": {
+      "None": "UART_HWCONTROL_NONE",
+      "RTS/CTS": "UART_HWCONTROL_RTS_CTS"
+    }
+  }
+}

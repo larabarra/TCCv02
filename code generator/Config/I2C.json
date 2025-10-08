@@ -1,0 +1,30 @@
+{
+  "project_name": "MyProject",
+  "microcontroller": "STM32G474RE",
+  "peripherals": [
+    {
+      "type": "I2C",
+      "instance": "I2C1",
+      "pins": [
+        {
+          "name": "I2C1_SCL",
+          "port": "GPIOB",
+          "pin": 6,
+          "mode": "AF_OD",
+          "pull": "PULLUP",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 4
+        },
+        {
+          "name": "I2C1_SDA",
+          "port": "GPIOB",
+          "pin": 7,
+          "mode": "AF_OD",
+          "pull": "PULLUP",
+          "speed": "VERY_HIGH",
+          "alternate_fn": 4
+        }
+      ]
+    }
+  ]
+}
