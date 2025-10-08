@@ -329,11 +329,23 @@ class App(tk.Tk):
                     # Look up the values in the dictionary loaded from the JSON file
                     speed_map = data.HAL_MAPPINGS.get("I2C", {}).get("clockSpeed", {})
                     addr_map = data.HAL_MAPPINGS.get("I2C", {}).get("addressingMode", {})
-                    
+                    devices_list = []
+                    tree = widgets.get('devices_tree')
+                    if tree:
+                        for item_id in tree.get_children():
+                            values = tree.item(item_id, 'values')
+                            addr_str = values[1]
+                            try:
+                                addr_int = int(addr_str, 0)
+                            except (ValueError, IndexError):
+                                addr_int = 0
+                            devices_list.append({"name": values[0], "address": addr_int})
+
                     settings["I2C"][instance_name] = {
                         "clockSpeed": speed_map.get(widgets['speed'].get(), 0),
                         "addressingMode": addr_map.get(widgets['addr_mode'].get()),
                         "transferMode": widgets['transfer'].get().upper(),
+                         "devices": devices_list
                     }
 
         # --- UART/USART Settings ---
@@ -357,6 +369,47 @@ class App(tk.Tk):
                     }
 
         return settings
+    
+    def add_i2c_device(self, instance_name):
+        """Adds a slave device to the list of an I2C instance."""
+        widgets = self.i2c_widgets.get(instance_name, {})
+        name_entry = widgets.get('dev_name_entry')
+        addr_entry = widgets.get('dev_addr_entry')
+        tree = widgets.get('devices_tree')
+
+        if not all([name_entry, addr_entry, tree]): return
+
+        dev_name = name_entry.get().strip().upper().replace(" ", "_")
+        dev_addr = addr_entry.get().strip()
+
+        if not dev_name or not dev_addr:
+            messagebox.showwarning("Campos Vazios", "Por favor, preencha o Nome e o Endereço do dispositivo.")
+            return
+
+        # Simple address validation
+        try:
+            addr_int = int(dev_addr, 0) # Base 0 auto-detects '0x' for hex
+            if not (0 <= addr_int <= 0x7F):
+                raise ValueError("Address out of 7-bit range.")
+        except ValueError:
+            messagebox.showerror("Endereço Inválido", "Por favor, insira um endereço 7-bit válido (ex: 68 ou 0x44).")
+            return
+
+        tree.insert("", "end", values=(dev_name, dev_addr))
+        name_entry.delete(0, "end")
+        addr_entry.delete(0, "end")
+
+    def remove_i2c_device(self, instance_name):
+        """Removes the selected device from the list."""
+        widgets = self.i2c_widgets.get(instance_name, {})
+        tree = widgets.get('devices_tree')
+        
+        selected_item = tree.selection()
+        if not selected_item:
+            messagebox.showwarning("Nenhum Item", "Selecione um dispositivo na lista para remover.")
+            return
+            
+        tree.delete(selected_item)
 
     def export_config(self):
         """

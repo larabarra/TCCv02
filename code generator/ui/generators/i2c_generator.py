@@ -3,6 +3,7 @@
 from __future__ import annotations
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from datetime import datetime
 
 # --- Path Definitions ---
 # The script calculates key directory paths by navigating up from its own location.
@@ -89,74 +90,54 @@ def generate_i2c_config(i2c_pinout_blocks: list[dict], i2c_settings: dict) -> li
     Generates i2c.c and i2c.h files by merging pinout data with peripheral settings.
 
     Args:
-        i2c_blocks (list[dict]): A list of dictionaries, where each dictionary
-                                 represents an I2C peripheral instance and its pins.
+        i2c_pinout_blocks (list[dict]): A list of pinout configs for I2C instances.
+        i2c_settings (dict): A dictionary with operational settings for I2C instances.
 
     Returns:
-        list[str]: A list containing the string paths of the generated .c and .h files.
+        list[str]: A list of paths to the generated files.
     """
     i2c_interfaces = []
-    
-    # Mapping dictionaries to convert UI strings to HAL-compatible definitions.
-    map_pull = {
-        "NOPULL":   "GPIO_NOPULL",
-        "PULLUP":   "GPIO_PULLUP",
-        "PULLDOWN": "GPIO_PULLDOWN",
-    }
-    map_speed = {
-        "LOW":       "GPIO_SPEED_FREQ_LOW",
-        "MEDIUM":    "GPIO_SPEED_FREQ_MEDIUM",
-        "HIGH":      "GPIO_SPEED_FREQ_HIGH",
-        "VERY_HIGH": "GPIO_SPEED_FREQ_VERY_HIGH",
-    }
 
-    print(i2c_pinout_blocks)
-    print(i2c_settings)
-
-    # Process each I2C peripheral block from the configuration.
     for block in i2c_pinout_blocks:
-        instance = block.get('instance')  # e.g., "I2C1"
+        instance = block.get('instance')
         pins_list = block.get('pins', [])
-        
         if not instance or not pins_list:
-            continue # Skip malformed blocks.
+            continue
             
-
         instance_settings = i2c_settings.get(instance, {})
         if not instance_settings:
             print(f"WARNING: No peripheral settings found for {instance}. Using defaults.")
 
-
-        # Extract the instance number (1, 2, etc.) from the instance name.
-        instance_num = int(instance.replace("I2C", ""))
-        
-        # Identify the SCL and SDA pins from the pins list by checking their name.
         scl_pin_data = next((p for p in pins_list if 'SCL' in p.get('name', '').upper()), None)
         sda_pin_data = next((p for p in pins_list if 'SDA' in p.get('name', '').upper()), None)
-        
-        # Ensure both SCL and SDA pins were found before proceeding.
-        if scl_pin_data is None or sda_pin_data is None:
-            print(f"ERROR: SCL or SDA pin data not found for {instance}. Skipping block.")
+        if not scl_pin_data or not sda_pin_data:
+            print(f"ERROR: SCL or SDA pin data not found for {instance}. Skipping.")
             continue
         
-        # Build a context dictionary for this specific I2C interface.
+        # Pre-process the device list to perform the address calculation in Python.
+        processed_devices = []
+        devices_from_settings = instance_settings.get("devices", [])
+        for device in devices_from_settings:
+            address_7bit = device.get("address", 0)
+            # The left-shift calculation is done here, safely, in Python.
+            address_hal = address_7bit << 1
+            processed_devices.append({
+                "name": device.get("name", "UNKNOWN_DEVICE"),
+                "address_hal": address_hal # Pass the pre-calculated value.
+            })
+
         interface_context = {
             "num": int(instance.replace("I2C", "")),
             "interface": instance,
-            
-            # HAL Init settings (from peripheral_settings.json)
-            "timing_reg": TIMING_REGISTER_MAP.get(instance_settings.get("clockSpeed"), "0x30909DEC"), # Default to 100kHz
+            "timing_reg": TIMING_REGISTER_MAP.get(instance_settings.get("clockSpeed"), "0x30909DEC"),
             "addressing_mode": instance_settings.get("addressingMode", "I2C_ADDRESSINGMODE_7BIT"),
-            
-            # Default values for other settings
-            "own_address1": "0",
+            "devices": processed_devices, # Use the pre-processed list.
             "dual_address_mode": "I2C_DUALADDRESS_DISABLE",
+            "own_address1": "0",
             "own_address2": "0",
             "own_address2_masks": "I2C_OA2MSK_NOMASK",
             "general_call_mode": "I2C_GENERALCALL_DISABLE",
             "no_stretch_mode": "I2C_NOSTRETCH_DISABLE",
-            
-            # Pin data for MSP init (from pinout configuration)
             "scl_port_char": scl_pin_data['port'][4],
             "scl_pin_num": scl_pin_data['pin'],
             "sda_port_char": sda_pin_data['port'][4],
@@ -167,18 +148,16 @@ def generate_i2c_config(i2c_pinout_blocks: list[dict], i2c_settings: dict) -> li
         
         i2c_interfaces.append(interface_context)
 
-    # If no valid I2C interfaces were configured, do not generate any files.
     if not i2c_interfaces:
-        print("[I2C] No valid I2C interfaces found in configuration. No files generated.")
         return []
 
-    # Create the final context for rendering the templates.
-    context = {"i2c_interfaces": i2c_interfaces}
-
-    # Render and save the .h and .c files.
+    context = {
+        "i2c_interfaces": i2c_interfaces,
+        "now": datetime.now
+    }
+    
     out_h_path = _render_and_save(TEMPLATE_H_NAME, context, OUT_INC_PATH)
     out_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)
 
-    print(f"[I2C] Processed {len(i2c_interfaces)} I2C instance(s).")
-
     return [str(out_c_path), str(out_h_path)]
+

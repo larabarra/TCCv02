@@ -1,7 +1,9 @@
 {
-  "cmake.cmakePath": "C:/ST/STM32CubeCLT_1.19.0/CMake/bin/cmake.exe",
+  "cmake.cmakePath": "cube-cmake",
   "cmake.preferredGenerators": ["Ninja"],
-  "cmake.configureArgs": [],
+  "cmake.configureArgs": [
+    "-DCMAKE_COMMAND=cube-cmake"
+  ],
 
   // Se quiser garantir o Ninja do CLT:
   "cmake.configureSettings": {
