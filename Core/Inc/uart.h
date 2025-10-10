@@ -1,27 +1,20 @@
-#ifndef __UART_H
-#define __UART_H
 
-#include "stm32g4xx_hal.h"
+// --- Handles Declaration ---
+#include "main.h"
 
-#ifdef __cplusplus
- extern "C" {
-#endif
+#include <stdint.h>
 
-// --- Declaração dos Handles e Protótipos ---
+UART_HandleTypeDef huart1;
 
-extern UART_HandleTypeDef huart1;
-void MX_UART1_Init(void);
+/* --- Application-level Functions --- */
+HAL_StatusTypeDef UART_Transmit(UART_HandleTypeDef *huart, uint8_t *data, uint16_t size, uint32_t timeout);
+HAL_StatusTypeDef UART_Receive(UART_HandleTypeDef *huart, uint8_t *buffer, uint16_t size, uint32_t timeout);
 
-extern UART_HandleTypeDef huart3;
-void MX_UART3_Init(void);
+/* --- Function Prototypes --- */
+void MX_UART_Init(void);
 
 
-// Protótipos das funções de baixo nível do CubeMX (externas)
-void HAL_UART_MspInit(UART_HandleTypeDef* huart);
-void HAL_UART_MspDeInit(UART_HandleTypeDef* huart);
+
 
 #ifdef __cplusplus
-}
-#endif
-
-#endif /* __UART_H */
+#endif /* __UART_H__ */

@@ -1,96 +1,100 @@
-cmake_minimum_required(VERSION 3.22)
-# Enable CMake support for ASM and C languages
+cmake_minimum_required(VERSION 3.16)
+
+# --- Project Definitions ---
+project(TCCv02) # LANGUAGES removed for better toolchain compatibility
+
+# --- Enable Languages and Set Toolchain ---
+# This part assumes you are using the -D CMAKE_TOOLCHAIN_FILE flag from the command line
 enable_language(C ASM)
-# STM32CubeMX generated symbols (macros)
-set(MX_Defines_Syms 
-	USE_NUCLEO_64 
-	USE_HAL_DRIVER 
-	STM32G474xx
-    $<$<CONFIG:Debug>:DEBUG>
+set(CMAKE_SYSTEM_NAME Generic)
+
+# --- Source Files (from STM32CubeMX) ---
+# More robust than GLOB, as it lists files explicitly.
+# All paths are now relative to the project's root directory.
+set(APPLICATION_SOURCES
+    "${CMAKE_SOURCE_DIR}/Core/Src/main.c"
+    "${CMAKE_SOURCE_DIR}/Core/Src/gpio.c"
+    "${CMAKE_SOURCE_DIR}/Core/Src/uart.c"
+    "${CMAKE_SOURCE_DIR}/Core/Src/i2c.c"
+    "${CMAKE_SOURCE_DIR}/Core/Src/stm32g4xx_it.c"
+    "${CMAKE_SOURCE_DIR}/Core/Src/stm32g4xx_hal_msp.c"
+    "${CMAKE_SOURCE_DIR}/Core/Src/system_stm32g4xx.c"
 )
 
-# STM32CubeMX generated include paths
-set(MX_Include_Dirs
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/BSP/STM32G4xx_Nucleo
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32G4xx/Include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Include
+set(HAL_DRIVER_SOURCES
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ex.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ramfunc.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_exti.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma_ex.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c.c"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c_ex.c"
 )
 
-# STM32CubeMX generated application sources
-set(MX_Application_Src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gpio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32g4xx_it.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32g4xx_hal_msp.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32g474xx.s
-)
-
-# STM32 HAL/LL Drivers
-set(STM32_Drivers_Src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/system_stm32g4xx.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ramfunc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_exti.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_usart.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_usart_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/BSP/STM32G4xx_Nucleo/stm32g4xx_nucleo.c
-)
-
-# Drivers Midllewares
-
-
-
-# Link directories setup
-set(MX_LINK_DIRS
-
-)
-# Project static libraries
-set(MX_LINK_LIBS 
-    STM32_Drivers
-    ${TOOLCHAIN_LINK_LIBRARIES}
-    
-)
-# Interface library for includes and symbols
-add_library(stm32cubemx INTERFACE)
-target_include_directories(stm32cubemx INTERFACE ${MX_Include_Dirs})
-target_compile_definitions(stm32cubemx INTERFACE ${MX_Defines_Syms})
-
-# Create STM32_Drivers static library
-add_library(STM32_Drivers OBJECT)
-target_sources(STM32_Drivers PRIVATE ${STM32_Drivers_Src})
-target_link_libraries(STM32_Drivers PUBLIC stm32cubemx)
-
-
-# Add STM32CubeMX generated application sources to the project
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${MX_Application_Src})
-
-# Link directories setup
-target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE ${MX_LINK_DIRS})
-
-# Add libraries to the project
-target_link_libraries(${CMAKE_PROJECT_NAME} ${MX_LINK_LIBS})
-
-# Add the map file to the list of files to be removed with 'clean' target
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
-
-# Validate that STM32CubeMX code is compatible with C standard
-if((CMAKE_C_STANDARD EQUAL 90) OR (CMAKE_C_STANDARD EQUAL 99))
-    message(ERROR "Generated code requires C11 or higher")
+# Find the startup file and validate it was found.
+file(GLOB STARTUP_FILE "${CMAKE_SOURCE_DIR}/startup_*.s")
+if(NOT STARTUP_FILE)
+    message(FATAL_ERROR "Startup file (.s) not found in the project root directory. Please check the file location.")
 endif()
+
+# --- ARM Compiler Definitions ---
+add_compile_options(
+    -mcpu=cortex-m4
+    -mthumb
+    -mfpu=fpv4-sp-d16
+    -mfloat-abi=hard
+    -g3
+    -Wall
+    -fmessage-length=0
+    -ffunction-sections
+    -fdata-sections
+)
+
+# --- Linker Definitions ---
+file(GLOB LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/*_FLASH.ld")
+add_link_options(
+    -T${LINKER_SCRIPT}
+    -Wl,-Map=${CMAKE_PROJECT_NAME}.map
+    -Wl,--gc-sections
+    -specs=nosys.specs
+)
+
+# --- Include Directories (Headers) ---
+include_directories(
+    "${CMAKE_SOURCE_DIR}/Core/Inc"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Inc"
+    "${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy"
+    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32G4xx/Include"
+    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include"
+)
+
+# --- Macro Definitions ---
+add_compile_definitions(
+    DEBUG
+    USE_HAL_DRIVER
+    STM32G474xx
+)
+
+# --- Create the Executable (.elf) ---
+add_executable(${CMAKE_PROJECT_NAME}.elf
+    ${STARTUP_FILE}
+    ${APPLICATION_SOURCES}
+    ${HAL_DRIVER_SOURCES}
+)
+
+# --- Generate Hex and Bin files ---
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME}.elf POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}.elf> ${CMAKE_PROJECT_NAME}.hex
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}.elf> ${CMAKE_PROJECT_NAME}.bin
+)
+

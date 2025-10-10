@@ -1,31 +1,7 @@
 {
-  "project_name": "Texte_Projectp",
+  "project_name": "MyProject",
   "microcontroller": "STM32G474RE",
   "peripherals": [
-    {
-      "type": "I2C",
-      "instance": "I2C1",
-      "pins": [
-        {
-          "name": "I2C1_SCL",
-          "port": "GPIOB",
-          "pin": 6,
-          "mode": "AF_OD",
-          "pull": "PULLUP",
-          "speed": "VERY_HIGH",
-          "alternate_fn": 4
-        },
-        {
-          "name": "I2C1_SDA",
-          "port": "GPIOB",
-          "pin": 7,
-          "mode": "AF_OD",
-          "pull": "PULLUP",
-          "speed": "VERY_HIGH",
-          "alternate_fn": 4
-        }
-      ]
-    },
     {
       "type": "USART",
       "instance": "UART1",
@@ -47,29 +23,6 @@
           "pull": "NOPULL",
           "speed": "VERY_HIGH",
           "alternate_fn": 7
-        }
-      ]
-    },
-    {
-      "type": "GPIO",
-      "pins": [
-        {
-          "name": "LED_EXEMPLE",
-          "port": "GPIOA",
-          "pin": 0,
-          "mode": "OUTPUT_PP",
-          "pull": "NOPULL",
-          "speed": "LOW",
-          "alternate_fn": 0
-        },
-        {
-          "name": "READ_DIGITAL_DATA",
-          "port": "GPIOA",
-          "pin": 2,
-          "mode": "INPUT",
-          "pull": "NOPULL",
-          "speed": "LOW",
-          "alternate_fn": 0
         }
       ]
     }

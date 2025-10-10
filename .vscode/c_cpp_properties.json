@@ -7,15 +7,16 @@
                 "STM32G474xx"
             ],
             "includePath": [
-                "${workspaceFolder}/Core/Inc",
                 "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy",
+                "${workspaceFolder}/Drivers/CMSIS/Include",
                 "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32G4xx/Include",
-                "${workspaceFolder}/Drivers/CMSIS/Include"
+                "${workspaceFolder}/Core/Inc",
+                "C:/Users/laram/Documents/stm32/TCCv02/Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h"
             ],
-            "compilerPath": "arm-none-eabi-gcc",
+            "compilerPath": "C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin",
             "cStandard": "c11",
-            "cppStandard": "c++17",
-            "compileCommands": "${workspaceFolder}/build/Debug/compile_commands.json"
+            "cppStandard": "c++17"
         }
     ],
     "version": 4

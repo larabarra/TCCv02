@@ -1,83 +1,123 @@
 #include "uart.h"
-#include <stddef.h> // Para NULL
-
-// --- Handles Declaration ---
-{% for uart in uart_interfaces %}
-UART_HandleTypeDef huart{{ uart.num }};
-{% endfor %}
 
 
-// --- MX_UART_Init Functions ---
-{% for uart in uart_interfaces %}
-void MX_UART{{ uart.num }}_Init(void)
+
+// --- MX_UART_Init Function ---
+void MX_UART_Init(void)
 {
+{% for uart in uart_interfaces %}
     huart{{ uart.num }}.Instance = {{ uart.interface }};
     huart{{ uart.num }}.Init.BaudRate = {{ uart.baud_rate }};
-    huart{{ uart.num }}.Init.WordLength = UART_WORDLENGTH_8B;
-    huart{{ uart.num }}.Init.StopBits = UART_STOPBITS_1;
-    huart{{ uart.num }}.Init.Parity = UART_PARITY_NONE;
-    huart{{ uart.num }}.Init.Mode = UART_MODE_TX_RX; // Modo Full Duplex
-    huart{{ uart.num }}.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart{{ uart.num }}.Init.OverSampling = UART_OVERSAMPLING_16;
-    huart{{ uart.num }}.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-    huart{{ uart.num }}.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-    huart{{ uart.num }}.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    huart{{ uart.num }}.Init.WordLength = {{ uart.word_length }};
+    huart{{ uart.num }}.Init.StopBits = {{ uart.stop_bits }};
+    huart{{ uart.num }}.Init.Parity = {{ uart.parity }};
+    huart{{ uart.num }}.Init.Mode = {{ uart.mode }};
+    huart{{ uart.num }}.Init.HwFlowCtl = {{ uart.hw_flow_ctl }};
+    huart{{ uart.num }}.Init.OverSampling = {{ uart.oversampling }};
     if (HAL_UART_Init(&huart{{ uart.num }}) != HAL_OK)
     {
         Error_Handler();
     }
-    if (HAL_UARTEx_SetTxFifoThreshold(&huart{{ uart.num }}, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    if (HAL_UARTEx_SetRxFifoThreshold(&huart{{ uart.num }}, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    if (HAL_UARTEx_DisableFifoMode(&huart{{ uart.num }}) != HAL_OK)
-    {
-        Error_Handler();
-    }
-}
 {% endfor %}
+}
 
-
-// --- HAL_UART_MspInit (Configuração de Pinos de Baixo Nível) ---
-void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+// --- HAL_UART_MspInit (Low-Level Pin Configuration) ---
+void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-    
 {% for uart in uart_interfaces %}
-    {% if loop.first %}if{% else %}else if{% endif %}(huart->Instance == {{ uart.interface }})
+    if(uartHandle->Instance=={{ uart.interface }})
     {
-        // --- 1. Habilita Clocks das Portas GPIO ---
-        __HAL_RCC_GPIO{{ uart.tx_port }}_CLK_ENABLE();
-        __HAL_RCC_GPIO{{ uart.rx_port }}_CLK_ENABLE();
+        /* Peripheral clock enable */
+        __HAL_RCC_{{ uart.interface }}_CLK_ENABLE();
 
-        // --- 2. Configuração dos Pinos TX e RX ---
-        
-        // TX Pin
-        GPIO_InitStruct.Pin = GPIO_PIN_{{ uart.tx_pin_num }};
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = {{ uart.tx_pull }};
-        GPIO_InitStruct.Speed = {{ uart.tx_speed }};
-        GPIO_InitStruct.Alternate = {{ uart.tx_af }};
-        HAL_GPIO_Init(GPIO{{ uart.tx_port }}, &GPIO_InitStruct);
+        /* GPIO Clocks Enable */
+        {% if uart.tx_pin %}__HAL_RCC_{{ uart.tx_pin.port }}_CLK_ENABLE();{% endif %}
+        {% if uart.rx_pin and (not uart.tx_pin or uart.rx_pin.port != uart.tx_pin.port) %}__HAL_RCC_{{ uart.rx_pin.port }}_CLK_ENABLE();{% endif %}
 
-        // RX Pin
-        GPIO_InitStruct.Pin = GPIO_PIN_{{ uart.rx_pin_num }};
+        /**{{ uart.interface }} GPIO Configuration
+        {% if uart.tx_pin %}P{{ uart.tx_pin.port[4:] }}{{ uart.tx_pin.pin }}     ------> {{ uart.interface }}_TX
+        {% endif %}{% if uart.rx_pin %}P{{ uart.rx_pin.port[4:] }}{{ uart.rx_pin.pin }}     ------> {{ uart.interface }}_RX
+        {% endif %}*/
+        
+        {% if uart.tx_pin %}
+        /*Configure GPIO pin : {{ uart.tx_pin.port[4:] }}{{ uart.tx_pin.pin }} */
+        GPIO_InitStruct.Pin = GPIO_PIN_{{ uart.tx_pin.pin }};
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = {{ uart.rx_pull }};
-        GPIO_InitStruct.Speed = {{ uart.rx_speed }};
-        GPIO_InitStruct.Alternate = {{ uart.rx_af }};
-        HAL_GPIO_Init(GPIO{{ uart.rx_port }}, &GPIO_InitStruct);
-        
-        // --- 3. Habilita Clock do UART ---
-        __HAL_RCC_USART{{ uart.num }}_CLK_ENABLE();
-        
-        // --- 4. Habilita Interrupções (Opcional) ---
-        HAL_NVIC_SetPriority(USART{{ uart.num }}_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(USART{{ uart.num }}_IRQn);
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        HAL_GPIO_Init({{ uart.tx_pin.port }}, &GPIO_InitStruct);
+        {% endif %}
+
+        {% if uart.rx_pin %}
+        /*Configure GPIO pin : {{ uart.rx_pin.port[4:] }}{{ uart.rx_pin.pin }} */
+        GPIO_InitStruct.Pin = GPIO_PIN_{{ uart.rx_pin.pin }};
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init({{ uart.rx_pin.port }}, &GPIO_InitStruct);
+        {% endif %}
     }
 {% endfor %}
 }
+
+/*
+ * ----------------------------------------------------------------
+ * --- Application-level Transmit/Receive Functions ---
+ * ----------------------------------------------------------------
+ */
+
+/**
+  * @brief  Sends an amount of data in a blocking, interrupt or DMA mode.
+  * @param  huart Pointer to a UART_HandleTypeDef structure.
+  * @param  data Pointer to data buffer.
+  * @param  size Amount of data to be sent.
+  * @param  timeout Timeout duration for blocking mode.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef UART_Transmit(UART_HandleTypeDef *huart, uint8_t *data, uint16_t size, uint32_t timeout)
+{
+    {% for uart in uart_interfaces %}
+    if (huart->Instance == {{ uart.interface }})
+    {
+        {% if uart.transferMode == 'POLLING' %}
+        return HAL_UART_Transmit(huart, data, size, timeout);
+        {% elif uart.transferMode == 'INTERRUPT' %}
+        return HAL_UART_Transmit_IT(huart, data, size);
+        {% elif uart.transferMode == 'DMA' %}
+        return HAL_UART_Transmit_DMA(huart, data, size);
+        {% else %}
+        // Fallback to Polling mode if the selected mode is not recognized.
+        return HAL_UART_Transmit(huart, data, size, timeout);
+        {% endif %}
+    }
+    {% endfor %}
+    return HAL_ERROR;
+}
+
+/**
+  * @brief  Receives an amount of data in a blocking, interrupt or DMA mode.
+  * @param  huart Pointer to a UART_HandleTypeDef structure.
+  * @param  buffer Pointer to data buffer.
+  * @param  size Amount of data to be received.
+  * @param  timeout Timeout duration for blocking mode.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef UART_Receive(UART_HandleTypeDef *huart, uint8_t *buffer, uint16_t size, uint32_t timeout)
+{
+    {% for uart in uart_interfaces %}
+    if (huart->Instance == {{ uart.interface }})
+    {
+        {% if uart.transferMode == 'POLLING' %}
+        return HAL_UART_Receive(huart, buffer, size, timeout);
+        {% elif uart.transferMode == 'INTERRUPT' %}
+        return HAL_UART_Receive_IT(huart, buffer, size);
+        {% elif uart.transferMode == 'DMA' %}
+        return HAL_UART_Receive_DMA(huart, buffer, size);
+        {% else %}
+        // Fallback to Polling mode if the selected mode is not recognized.
+        return HAL_UART_Receive(huart, buffer, size, timeout);
+        {% endif %}
+    }
+    {% endfor %}
+    return HAL_ERROR;
+}
+
