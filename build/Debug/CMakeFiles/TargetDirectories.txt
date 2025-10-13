@@ -1,3 +1,0 @@
-C:/Users/laram/Documents/stm32/TCCv02/build/Debug/CMakeFiles/tcc_g4.elf.dir
-C:/Users/laram/Documents/stm32/TCCv02/build/Debug/CMakeFiles/edit_cache.dir
-C:/Users/laram/Documents/stm32/TCCv02/build/Debug/CMakeFiles/rebuild_cache.dir

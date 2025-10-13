@@ -1,69 +1,121 @@
 cmake_minimum_required(VERSION 3.22)
-project(tcc_g4 LANGUAGES C ASM)
+
+#
+# This file is generated only once,
+# and is not re-generated if converter is called multiple times.
+#
+# User is free to modify the file as much as necessary
+#
+
+# Setup compiler settings
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 
 
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-
-
-# Definições do MCU / HAL
-add_compile_definitions(STM32G474xx USE_HAL_DRIVER)
-
-# Seu script de link (apenas aqui!)
-set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32G474XX_FLASH.ld")
-
-# Ferramentas trazidas pelo toolchain file (já estão em cache)
-if(NOT ARM_OBJCOPY OR NOT ARM_SIZE)
-  message(FATAL_ERROR "ARM_OBJCOPY/ARM_SIZE não encontrados (toolchain?).")
+# Define the build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-# Target principal
-add_executable(${PROJECT_NAME}.elf
-  # === fontes do projeto ===
-  Core/Src/main.c
-  Core/Src/system_stm32g4xx.c
-  Core/Src/stm32g4xx_it.c
+# Set the project name
+set(CMAKE_PROJECT_NAME cmakestudy)
 
-  Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c
-  Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c
-  Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash.c
-  Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ex.c
-  Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ramfunc.c
+# Enable compile command to ease indexing with e.g. clangd
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+
+# Core project settings
+project(${CMAKE_PROJECT_NAME})
+message("Build type: " ${CMAKE_BUILD_TYPE})
+
+# Enable CMake support for ASM and C languages
+enable_language(C ASM)
+
+# Create an executable object type
+add_executable(${CMAKE_PROJECT_NAME})
+
+# Add STM32CubeMX generated sources
+add_subdirectory(cmake/stm32cubemx)
+
+# Link directories setup
+target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    # Add user defined library search paths
 )
 
-# Includes
-target_include_directories(${PROJECT_NAME}.elf PRIVATE
-  ${CMAKE_SOURCE_DIR}/Core/Inc
-  ${CMAKE_SOURCE_DIR}/Drivers/STM32G4xx_HAL_Driver/Inc
-  ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32G4xx/Include
-  ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include
+# Add sources to executable
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    # Add user sources here
 )
 
-# Flags adicionais por alvo (compilação)
-target_compile_options(${PROJECT_NAME}.elf PRIVATE
-  -ffunction-sections -fdata-sections -Wall -Wextra
+# Add include paths
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    # Add user defined include paths
 )
 
-# Flags de link (driver é o gcc; -T só aqui!)
-target_link_options(${PROJECT_NAME}.elf PRIVATE
-  -Wl,--gc-sections
-  -T${LINKER_SCRIPT}
-  -Wl,-Map,$<TARGET_FILE_DIR:${PROJECT_NAME}.elf>/${PROJECT_NAME}.map
+# Add project symbols (macros)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+    # Add user defined symbols
 )
 
-# Saída organizada
-set_target_properties(${PROJECT_NAME}.elf PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/firmware
+# Remove wrong libob.a library dependency when using cpp files
+list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
+
+# Add linked libraries
+target_link_libraries(${CMAKE_PROJECT_NAME}
+    stm32cubemx
+
+    # Add user defined libraries
 )
 
-# Artefatos derivados
-set(HEX_FILE  $<TARGET_FILE_DIR:${PROJECT_NAME}.elf>/${PROJECT_NAME}.hex)
-set(BIN_FILE  $<TARGET_FILE_DIR:${PROJECT_NAME}.elf>/${PROJECT_NAME}.bin)
-set(SREC_FILE $<TARGET_FILE_DIR:${PROJECT_NAME}.elf>/${PROJECT_NAME}.srec)
+# --- ELF -> HEX/BIN & size (pós-build) ---------------------------------------
 
-add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-  COMMAND "${ARM_OBJCOPY}" -O ihex   $<TARGET_FILE:${PROJECT_NAME}.elf> "${HEX_FILE}"
-  COMMAND "${ARM_OBJCOPY}" -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> "${BIN_FILE}"
-  COMMAND "${ARM_OBJCOPY}" -O srec   $<TARGET_FILE:${PROJECT_NAME}.elf> "${SREC_FILE}"
-  COMMAND "${ARM_SIZE}" --format=berkeley $<TARGET_FILE:${PROJECT_NAME}.elf>
-  COMMENT "Gerando HEX/BIN/SREC e mostrando tamanho"
+# Tenta achar as ferramentas da GNU ARM
+find_program(CMAKE_OBJCOPY arm-none-eabi-objcopy)
+find_program(CMAKE_SIZE    arm-none-eabi-size)
+
+if(NOT CMAKE_OBJCOPY)
+  message(FATAL_ERROR "arm-none-eabi-objcopy não encontrado no PATH. \
+Adicione, por exemplo, C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin ao PATH do terminal.")
+endif()
+
+if(NOT CMAKE_SIZE)
+  message(WARNING "arm-none-eabi-size não encontrado; o tamanho não será mostrado.")
+endif()
+
+# Mostra o tamanho do firmware após o link (se a ferramenta existir)
+if(CMAKE_SIZE)
+  add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+    COMMENT "Mostrando tamanho do firmware"
+  )
+endif()
+
+# Gera .hex e .bin a partir do ELF
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_OBJCOPY} -O ihex
+          $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+          $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.hex
+  COMMAND ${CMAKE_OBJCOPY} -O binary
+          $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+          $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.bin
+  COMMENT "Convertendo ELF -> HEX e BIN"
+)
+
+# Alvo prático: compilar e garantir .hex pronto
+add_custom_target(hex ALL
+  DEPENDS ${CMAKE_PROJECT_NAME}
+  COMMENT "Target 'hex' garante .hex/.bin gerados"
+)
+
+# --- (Opcional) alvo de flash via STM32CubeProgrammer ------------------------
+# Ajuste o caminho do CLI conforme sua instalação do CubeProgrammer:
+# Ex.: C:/ST/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe
+set(CUBE_PROG "C:/ST/STM32CubeCLT_1.19.0/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe")
+
+add_custom_target(flash
+  COMMAND "${CUBE_PROG}" -c port=SWD mode=UR reset=HWrst -w
+          $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.hex
+          -v -rst
+  DEPENDS ${CMAKE_PROJECT_NAME}
+  COMMENT "Gravando .hex na placa via ST-LINK"
 )
