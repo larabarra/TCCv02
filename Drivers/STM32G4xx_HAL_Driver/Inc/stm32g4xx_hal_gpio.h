@@ -19,13 +19,13 @@
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef STM32G4xx_HAL_GPIO_H
 #define STM32G4xx_HAL_GPIO_H
-#include "stm32g4xx_hal_def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-
+#include "stm32g4xx_hal_def.h"
 
 /** @addtogroup STM32G4xx_HAL_Driver
   * @{

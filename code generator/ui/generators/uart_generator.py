@@ -1,6 +1,7 @@
 # uart_generator.py
 
 from __future__ import annotations
+from datetime import datetime
 import os
 import json
 import re
@@ -88,78 +89,75 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 
-def generate_uart_config(config_blocks: list[dict]) -> list[str]:
+def generate_uart_config(uart_pinout_blocks: list[dict], uart_settings: dict) -> list[str]:
     """
-    Generates uart.c and uart.h files based on a list of UART/USART configuration blocks.
+    Generates uart.c and uart.h files by merging pinout data with peripheral settings.
 
     Args:
-        config_blocks (list[dict]): A list of dictionaries, where each dictionary
-                                    represents a UART/USART instance and its pins.
+        uart_pinout_blocks (list[dict]): A list of pinout configs for UART instances.
+        uart_settings (dict): A dictionary with operational settings for UART instances.
 
     Returns:
-        list[str]: A list containing the string paths of the generated .c and .h files.
+        list[str]: A list of paths to the generated files.
     """
-    mcu_map = _load_mappings()
-    af_mapping = mcu_map.get("STM32G474RE", {}).get("uart_af_mapping", {})
+    uart_interfaces = []
 
-    uart_interfaces_list = []
-        
-    for cfg in config_blocks:
-        instance = cfg.get('instance', 'UART_UNKNOWN')
-        pins = cfg.get('pins', [])
-        
-        # 1. Find the TX and RX pin data within the list of pins for this instance.
-        tx_pin_data = next((p for p in pins if 'TX' in p.get('name', '')), None)
-        rx_pin_data = next((p for p in pins if 'RX' in p.get('name', '')), None)
-    
-        # Basic validation to ensure both pins are present.
-        if not tx_pin_data or not rx_pin_data:
-            print(f"Warning: Incomplete TX/RX pin configuration for {instance}. Skipping.")
+    for block in uart_pinout_blocks:
+        instance = block.get('instance')
+        pins_list = block.get('pins', [])
+        if not instance: continue
+
+        instance_settings = uart_settings.get(instance, {})
+        if not instance_settings:
+            print(f"WARNING: No peripheral settings found for {instance}. Using defaults.")
+
+        # Find TX and RX pins for this instance
+        tx_pin = next((p for p in pins_list if 'TX' in p.get('name', '').upper()), None)
+        rx_pin = next((p for p in pins_list if 'RX' in p.get('name', '').upper()), None)
+
+        # Deduce the operational mode based on which pins are configured
+        if tx_pin and rx_pin:
+            mode = "UART_MODE_TX_RX"
+        elif tx_pin:
+            mode = "UART_MODE_TX"
+        elif rx_pin:
+            mode = "UART_MODE_RX"
+        else:
+            print(f"ERROR: No TX or RX pins found for {instance}. Skipping.")
             continue
-    
-        # 2. Look up and format the Alternate Function (AF) macro.
-        
-        # Construct the pin name key for the mapping lookup (e.g., 'PA9', 'PB10').
-        tx_pin_key = f"P{tx_pin_data['port'][4:]}{tx_pin_data['pin']}"
-        rx_pin_key = f"P{rx_pin_data['port'][4:]}{rx_pin_data['pin']}"
 
-        # The mapping file uses 'USART' even if the UI uses 'UART'.
-        af_instance_key = instance.replace('UART', 'USART') 
-        
-        # Look up the full AF macro in the mapping file. Fall back to a generic macro if not found.
-        tx_af = af_mapping.get(af_instance_key, {}).get(tx_pin_key, f"GPIO_AF{tx_pin_data['alternate_fn']}_{instance}")
-        rx_af = af_mapping.get(af_instance_key, {}).get(rx_pin_key, f"GPIO_AF{rx_pin_data['alternate_fn']}_{instance}")
-        
-        # 3. Build the context dictionary for this UART interface.
-        uart_interfaces_list.append({
+        interface_context = {
             "num": _get_digits(instance),
-            "interface": instance,
-            "baud_rate": 115200, # This will eventually come from the UI configuration.
+            "interface": instance.replace("UART", "USART"), # HAL uses USARTx
             
-            # Formatted TX pin data
-            "tx_port": tx_pin_data['port'][4],
-            "tx_pin_num": str(tx_pin_data['pin']),
-            "tx_pull": f"GPIO_{tx_pin_data['pull']}",
-            "tx_speed": f"GPIO_SPEED_FREQ_{tx_pin_data['speed'].upper()}",
-            "tx_af": tx_af,
-            
-            # Formatted RX pin data
-            "rx_port": rx_pin_data['port'][4],
-            "rx_pin_num": str(rx_pin_data['pin']),
-            "rx_pull": f"GPIO_{rx_pin_data['pull']}",
-            "rx_speed": f"GPIO_SPEED_FREQ_{rx_pin_data['speed'].upper()}",
-            "rx_af": rx_af,
-        })
+            # Get settings from peripheral_settings.json, with safe defaults
+            "baud_rate": instance_settings.get("baudRate", 115200),
+            "word_length": instance_settings.get("wordLength", "UART_WORDLENGTH_8B"),
+            "stop_bits": instance_settings.get("stopBits", "UART_STOPBITS_1"),
+            "parity": instance_settings.get("parity", "UART_PARITY_NONE"),
+            "hw_flow_ctl": instance_settings.get("flowControl", "UART_HWCONTROL_NONE"),
+            "transferMode": instance_settings.get("transferMode", "POLLING"),
+            # Use the automatically deduced mode
+            "mode": mode,
 
-    # 4. Render the templates if any valid interfaces were found.
-    if not uart_interfaces_list:
-        print("[UART] No valid UART interfaces to render.")
-        return []
+            # Add fixed default values for advanced parameters
+            "oversampling": "UART_OVERSAMPLING_16",
+            
+            # Store pin data if it exists
+            "tx_pin": tx_pin,
+            "rx_pin": rx_pin,
+        }
         
-    context = {"uart_interfaces": uart_interfaces_list}
+        uart_interfaces.append(interface_context)
 
-    print(f"[UART] {len(uart_interfaces_list)} UART instance(s) ready for rendering.")
+    if not uart_interfaces:
+        return []
 
+    context = {
+        "uart_interfaces": uart_interfaces,
+        "now": datetime.now
+    }
+    
     out_h_path = _render_and_save(TEMPLATE_H_NAME, context, OUT_INC_PATH)
     out_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)
 

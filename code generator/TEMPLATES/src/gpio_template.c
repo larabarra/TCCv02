@@ -1,4 +1,4 @@
-#include "gpio_config.h"
+#include "gpio.h"
 
 
 void MX_GPIO_Init(void)

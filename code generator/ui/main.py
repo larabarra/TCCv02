@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 # main.py
 
-from collections import defaultdict
 import json
+import re
 import importlib
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import os 
-
+import os
+from collections import defaultdict
 
 # Import custom modules
 import data
@@ -23,17 +23,14 @@ class App(tk.Tk):
         
         # --- Load initial data ---
         if not data.load_initial_mapping():
-            messagebox.showerror("Fatal Error", "Could not load 'pin_map.json'. The application will now close.")
+            messagebox.showerror("Fatal Error", f"Could not load '{data.MCU_MAPPING_FILE}'. The application will now close.")
             self.destroy()
             return
-
-        # --- Load HAL mappings ---
-
-        if not data.load_hal_mappings(): # <-- LINHA MODIFICADA
-            messagebox.showerror("Fatal Error", "Could not load 'hal_map.json'. The application will now close.")
+            
+        if not data.load_hal_mappings():
+            messagebox.showerror("Fatal Error", f"Could not load '{data.HAL_MAPPING_FILE}'. The application will now close.")
             self.destroy()
             return
-
 
         self.title("STM32G474 — Config Generator")
         self.geometry("1150x740")
@@ -44,7 +41,8 @@ class App(tk.Tk):
         self.mcu_data = data.MCU_MAP[self.current_mcu]
         self.selections = []  # List of dictionaries for selected pins
         self.i2c_frames = {}  # To hold references to I2C configuration frames
-        self.uart_frames = {}   # To hold references to UART configuration frames
+        self.uart_frames = {} # To hold references to UART configuration frames
+
         self._build_ui()
         self._refresh_mapping_view()
         self._update_i2c_tab_state()
@@ -70,7 +68,7 @@ class App(tk.Tk):
 
         ttk.Button(top, text="Load Mapping JSON...", command=self.load_mapping_json).pack(side="right", padx=4)
         ttk.Button(top, text="Generate .c/.h", command=self.generate_files).pack(side="right", padx=4)
-        ttk.Button(top, text="Export project configs", command=self.export_config).pack(side="right", padx=4)
+        ttk.Button(top, text="Export Configs", command=self.export_config).pack(side="right", padx=4)
 
         # --- Main paned window for GPIO list and Notebook ---
         mid = ttk.Panedwindow(self, orient="horizontal")
@@ -93,7 +91,7 @@ class App(tk.Tk):
         tab_uart_frame = ttk.Frame(notebook, padding=6)
 
         # Add frames to the notebook
-        notebook.add(tab_gpio_frame, text="Pinout")
+        notebook.add(tab_gpio_frame, text="GPIO / Pinout")
         notebook.add(tab_i2c_frame, text="I2C")
         notebook.add(tab_uart_frame, text="UART/USART")
         
@@ -102,15 +100,24 @@ class App(tk.Tk):
         tab_i2c.create_i2c_tab(tab_i2c_frame, self)
         tab_uart.create_uart_tab(tab_uart_frame, self)
 
-    # ---------------- I2C TAB LOGIC ----------------
+    # ---------------- I2C & UART TAB LOGIC ----------------
     def _set_widget_state(self, parent_widget, state='disabled'):
-        """Recursively enable or disable all child widgets of a parent."""
+        """
+        Recursively enable or disable all child widgets of a parent.
+        This uses the correct '.state()' method for ttk widgets.
+        """
         for child in parent_widget.winfo_children():
             try:
-                child.configure(state=state)
-                self._set_widget_state(child, state)
+                # The proper way to set state for ttk widgets.
+                # 'disabled' is a state spec. To enable, we use '!disabled'.
+                child.state(['disabled'] if state == 'disabled' else ['!disabled'])
             except tk.TclError:
-                pass # Some widgets like Labels don't have a 'state' option
+                # This widget might not be a ttk widget with a 'state' method (e.g. a ttk.Frame).
+                # We still need to process its children.
+                pass
+            
+            # Always recurse to handle any children the widget might have.
+            self._set_widget_state(child, state)
 
     def _update_i2c_tab_state(self):
         """Enable I2C config frames only if a corresponding I2C pin is selected."""
@@ -121,18 +128,54 @@ class App(tk.Tk):
             else:
                 self._set_widget_state(frame, 'disabled')
 
-    # ---------------- UART TAB LOGIC ----------------
-
     def _update_uart_tab_state(self):
         """Enable UART config frames only if a corresponding UART/USART pin is selected."""
-        # Check for both 'UART' and 'USART' types
         active_uart_instances = {r['instance'] for r in self.selections if r['type'] in ['UART', 'USART']}
-        
         for instance_name, frame in self.uart_frames.items():
             if instance_name in active_uart_instances:
                 self._set_widget_state(frame, 'normal')
             else:
                 self._set_widget_state(frame, 'disabled')
+    
+    def add_i2c_device(self, instance_name):
+        """Adds a slave device to the list of an I2C instance."""
+        widgets = self.i2c_widgets.get(instance_name, {})
+        name_entry = widgets.get('dev_name_entry')
+        addr_entry = widgets.get('dev_addr_entry')
+        tree = widgets.get('devices_tree')
+
+        if not all([name_entry, addr_entry, tree]): return
+
+        dev_name = name_entry.get().strip().upper().replace(" ", "_")
+        dev_addr = addr_entry.get().strip()
+
+        if not dev_name or not dev_addr:
+            messagebox.showwarning("Campos Vazios", "Por favor, preencha o Nome e o Endereço do dispositivo.")
+            return
+
+        try:
+            addr_int = int(dev_addr, 0)
+            if not (0 <= addr_int <= 0x7F):
+                raise ValueError("Endereço fora do range 7-bit.")
+        except ValueError:
+            messagebox.showerror("Endereço Inválido", "Por favor, insira um endereço 7-bit válido (ex: 68 ou 0x44).")
+            return
+
+        tree.insert("", "end", values=(dev_name, dev_addr))
+        name_entry.delete(0, "end")
+        addr_entry.delete(0, "end")
+
+    def remove_i2c_device(self, instance_name):
+        """Removes the selected device from the list."""
+        widgets = self.i2c_widgets.get(instance_name, {})
+        tree = widgets.get('devices_tree')
+        
+        selected_item = tree.selection()
+        if not selected_item:
+            messagebox.showwarning("Nenhum Item", "Selecione um dispositivo na lista para remover.")
+            return
+            
+        tree.delete(selected_item)
 
     # ---------------- DATA & MAPPING LOGIC ----------------
     def _on_mcu_change(self, event=None):
@@ -233,7 +276,6 @@ class App(tk.Tk):
         
         self.ent_af.delete(0, "end"); self.ent_af.insert(0, str(af_num))
         
-        # Auto-generate a label if the field is empty
         if not self.ent_label.get().strip():
             if t == "GPIO": self.ent_label.insert(0, pin)
             elif t in ("I2C","UART","SPI"): self.ent_label.insert(0, f"{inst}_{self.cmb_role.get().upper()}")
@@ -267,7 +309,7 @@ class App(tk.Tk):
         self._update_uart_tab_state()
 
     def _refresh_table(self):
-       # """Clear and redraw the Treeview with current selections."""
+        """Clear and redraw the Treeview with current selections."""
         self.tree.delete(*self.tree.get_children())
         for i, r in enumerate(self.selections):
             self.tree.insert("", "end", iid=str(i), values=(
@@ -276,7 +318,7 @@ class App(tk.Tk):
             ))
 
     def del_selected(self):
-       # """Remove the selected row from the Treeview."""
+        """Remove the selected row from the Treeview."""
         cur = self.tree.selection()
         if not cur: return
         idx = int(cur[0])
@@ -287,7 +329,7 @@ class App(tk.Tk):
 
     # ---------------- FILE EXPORT & GENERATION ----------------
     def _get_pinout_config(self) -> dict:
-        #"""Gathers pinout data from the selection table."""
+        """Gathers pinout data from the selection table."""
         project_name = self.ent_project.get().strip() or "MyProject"
         micro = self.current_mcu
         grouped = defaultdict(list)
@@ -320,15 +362,15 @@ class App(tk.Tk):
         """
         settings = {}
 
-        # --- I2C Settings ---
+        # I2C Settings
         active_i2c_instances = {r['instance'] for r in self.selections if r['type'] == 'I2C'}
         if active_i2c_instances:
             settings["I2C"] = {}
             for instance_name, widgets in self.i2c_widgets.items():
                 if instance_name in active_i2c_instances:
-                    # Look up the values in the dictionary loaded from the JSON file
                     speed_map = data.HAL_MAPPINGS.get("I2C", {}).get("clockSpeed", {})
                     addr_map = data.HAL_MAPPINGS.get("I2C", {}).get("addressingMode", {})
+                    
                     devices_list = []
                     tree = widgets.get('devices_tree')
                     if tree:
@@ -340,21 +382,20 @@ class App(tk.Tk):
                             except (ValueError, IndexError):
                                 addr_int = 0
                             devices_list.append({"name": values[0], "address": addr_int})
-
+                    
                     settings["I2C"][instance_name] = {
                         "clockSpeed": speed_map.get(widgets['speed'].get(), 0),
                         "addressingMode": addr_map.get(widgets['addr_mode'].get()),
                         "transferMode": widgets['transfer'].get().upper(),
-                         "devices": devices_list
+                        "devices": devices_list,
                     }
 
-        # --- UART/USART Settings ---
+        # UART/USART Settings
         active_uart_instances = {r['instance'] for r in self.selections if r['type'] in ['UART', 'USART']}
         if active_uart_instances:
             settings["UART"] = {}
             for instance_name, widgets in self.uart_widgets.items():
                 if instance_name in active_uart_instances:
-                    # Look up the values in the dictionary loaded from the JSON file
                     word_map = data.HAL_MAPPINGS.get("UART", {}).get("wordLength", {})
                     stop_map = data.HAL_MAPPINGS.get("UART", {}).get("stopBits", {})
                     parity_map = data.HAL_MAPPINGS.get("UART", {}).get("parity", {})
@@ -366,50 +407,10 @@ class App(tk.Tk):
                         "stopBits": stop_map.get(widgets['stop_bits'].get()),
                         "parity": parity_map.get(widgets['parity'].get()),
                         "flowControl": flow_map.get(widgets['flow_control'].get()),
+                        "transferMode": widgets['transfer_mode'].get().upper(),
                     }
 
         return settings
-    
-    def add_i2c_device(self, instance_name):
-        """Adds a slave device to the list of an I2C instance."""
-        widgets = self.i2c_widgets.get(instance_name, {})
-        name_entry = widgets.get('dev_name_entry')
-        addr_entry = widgets.get('dev_addr_entry')
-        tree = widgets.get('devices_tree')
-
-        if not all([name_entry, addr_entry, tree]): return
-
-        dev_name = name_entry.get().strip().upper().replace(" ", "_")
-        dev_addr = addr_entry.get().strip()
-
-        if not dev_name or not dev_addr:
-            messagebox.showwarning("Campos Vazios", "Por favor, preencha o Nome e o Endereço do dispositivo.")
-            return
-
-        # Simple address validation
-        try:
-            addr_int = int(dev_addr, 0) # Base 0 auto-detects '0x' for hex
-            if not (0 <= addr_int <= 0x7F):
-                raise ValueError("Address out of 7-bit range.")
-        except ValueError:
-            messagebox.showerror("Endereço Inválido", "Por favor, insira um endereço 7-bit válido (ex: 68 ou 0x44).")
-            return
-
-        tree.insert("", "end", values=(dev_name, dev_addr))
-        name_entry.delete(0, "end")
-        addr_entry.delete(0, "end")
-
-    def remove_i2c_device(self, instance_name):
-        """Removes the selected device from the list."""
-        widgets = self.i2c_widgets.get(instance_name, {})
-        tree = widgets.get('devices_tree')
-        
-        selected_item = tree.selection()
-        if not selected_item:
-            messagebox.showwarning("Nenhum Item", "Selecione um dispositivo na lista para remover.")
-            return
-            
-        tree.delete(selected_item)
 
     def export_config(self):
         """
@@ -419,25 +420,20 @@ class App(tk.Tk):
             messagebox.showwarning("Nothing to Export", "Add at least one signal to the pinout table.")
             return
 
-        # 1. Ask user to select a destination FOLDER
         folder_path = filedialog.askdirectory(title="Select Destination Folder for Configuration Files")
         if not folder_path:
             return
 
-        # 2. Get data from helper functions
         pinout_data = self._get_pinout_config()
         peripheral_data = self._get_peripheral_settings()
 
-        # 3. Define file paths
         pinout_filepath = os.path.join(folder_path, "pinout_config.json")
         peripheral_filepath = os.path.join(folder_path, "peripheral_settings.json")
 
         try:
-            # 4. Save pinout_config.json
             with open(pinout_filepath, "w", encoding="utf-8") as f:
                 json.dump(pinout_data, f, indent=2, ensure_ascii=False)
 
-            # 5. Save peripheral_settings.json (only if it's not empty)
             if peripheral_data:
                 with open(peripheral_filepath, "w", encoding="utf-8") as f:
                     json.dump(peripheral_data, f, indent=2, ensure_ascii=False)
@@ -454,16 +450,13 @@ class App(tk.Tk):
         Asks the user for a folder, loads the pinout and peripheral configuration
         files, and passes them to the code generator module.
         """
-        # 1. Ask the user to select the FOLDER containing the config files.
         folder_path = filedialog.askdirectory(title="Select Folder Containing Configuration Files")
         if not folder_path:
             return
 
-        # 2. Construct the full paths to the expected JSON files.
         pinout_path = os.path.join(folder_path, "pinout_config.json")
         settings_path = os.path.join(folder_path, "peripheral_settings.json")
 
-        # 3. Load the data from the configuration files.
         try:
             with open(pinout_path, "r", encoding="utf-8") as f:
                 pinout_data = json.load(f)
@@ -474,8 +467,6 @@ class App(tk.Tk):
             messagebox.showerror("JSON Error", f"Error parsing 'pinout_config.json':\n{e}")
             return
 
-        # Load peripheral settings if the file exists; otherwise, use an empty dict.
-        # This is not treated as a fatal error, as a project might only have GPIOs.
         peripheral_data = {}
         try:
             with open(settings_path, "r", encoding="utf-8") as f:
@@ -486,14 +477,12 @@ class App(tk.Tk):
             messagebox.showerror("JSON Error", f"Error parsing 'peripheral_settings.json':\n{e}")
             return
 
-        # 4. Import the generator module and call the main generation function.
         try:
             gen = importlib.import_module("generators.generate_all")
             
             if not hasattr(gen, "generate_project_files"):
                 raise AttributeError("Function 'generate_project_files' not found in generate_all.py")
                 
-            # 5. Call the function with BOTH configuration dictionaries.
             out_files = gen.generate_project_files(pinout_data, peripheral_data)
             
             if out_files:
@@ -509,3 +498,4 @@ class App(tk.Tk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+

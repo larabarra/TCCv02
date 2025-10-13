@@ -1,22 +1,8 @@
 {
     "configurations": [
         {
-            "name": "STM32G474",
-            "defines": [
-                "USE_HAL_DRIVER",
-                "STM32G474xx"
-            ],
-            "includePath": [
-                "${workspaceFolder}/Core/Inc",
-                "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc",
-                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32G4xx/Include",
-                "${workspaceFolder}/Drivers/CMSIS/Include"
-            ],
-            "compilerPath": "arm-none-eabi-gcc",
-            "cStandard": "c11",
-            "cppStandard": "c++17",
-            "compileCommands": "${workspaceFolder}/build/Debug/compile_commands.json"
+            "name": "STM32",
+            "compileCommands": "${workspaceFolder}/build/Release/compile_commands.json"
         }
-    ],
-    "version": 4
+    ]
 }

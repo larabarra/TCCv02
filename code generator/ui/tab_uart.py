@@ -62,6 +62,13 @@ def create_uart_tab(parent_tab, app):
         combo_flow.grid(row=1, column=3, sticky="ew", padx=5, pady=5)
         widgets['flow_control'] = combo_flow
 
+        # Transfer Mode
+        ttk.Label(frame, text="Transfer Mode:").grid(row=2, column=2, sticky="w", padx=(20, 5), pady=5)
+        combo_transfer = ttk.Combobox(frame, state="readonly", values=['Polling', 'Interrupt', 'DMA'])
+        combo_transfer.set('Polling')
+        combo_transfer.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
+        widgets['transfer_mode'] = combo_transfer # Add to the widgets dictionary
+
         # Make widget columns expandable
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(3, weight=1)
