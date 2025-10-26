@@ -5,31 +5,36 @@ from tkinter import ttk
 def create_uart_tab(parent_tab, app):
     """
     Creates and populates the UART/USART tab with configuration frames.
-    
-    Args:
-        parent_tab (ttk.Frame): The parent tab frame to build the UI on.
-        app (App): The main application instance to link widgets and callbacks.
-    """
-    # A dictionary to hold the widgets for each UART instance
-    app.uart_widgets = {}
 
-    # Create a configuration frame for UART1 -> UART4
+    - Registra widgets em app.uart_widgets["UARTx"] com as chaves:
+      ['baud_rate', 'word_length', 'stop_bits', 'parity', 'flow_control', 'transfer_mode']
+    - Cria frames em app.uart_frames["UARTx"] para facilitar show/hide se precisar.
+    - Compatível com use_case_handler.apply_use_case().
+    """
+    # Dicionários de estado da app (garante que existam)
+    if not hasattr(app, "uart_widgets"):
+        app.uart_widgets = {}
+    if not hasattr(app, "uart_frames"):
+        app.uart_frames = {}
+
+    # Cria configurações para UART1..UART4
     for i in range(1, 5):
         instance_name = f"UART{i}"
-        
-        # Main frame for this instance
+
+        # Frame principal desta instância
         frame = ttk.LabelFrame(parent_tab, text=f"{instance_name} Configuration", padding=10)
         frame.pack(fill="x", padx=5, pady=5)
         app.uart_frames[instance_name] = frame
 
-        # Create a dictionary to hold this instance's widgets
+        # Dicionário de widgets desta instância
         widgets = {}
-        
-        # --- First Column ---
+
+        # --- Primeira coluna ---
         # Baud Rate
         ttk.Label(frame, text="Baud Rate:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        combo_baud = ttk.Combobox(frame, state="readonly", values=['9600', '19200', '57600', '115200', '921600'])
-        combo_baud.set('115200') # Common default
+        combo_baud = ttk.Combobox(frame, state="readonly",
+                                  values=['9600', '19200', '57600', '115200', '230400', '460800', '921600'])
+        combo_baud.set('115200')  # default comum
         combo_baud.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
         widgets['baud_rate'] = combo_baud
 
@@ -46,8 +51,8 @@ def create_uart_tab(parent_tab, app):
         combo_stop.set('1')
         combo_stop.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
         widgets['stop_bits'] = combo_stop
-        
-        # --- Second Column ---
+
+        # --- Segunda coluna ---
         # Parity
         ttk.Label(frame, text="Parity:").grid(row=0, column=2, sticky="w", padx=(20, 5), pady=5)
         combo_parity = ttk.Combobox(frame, state="readonly", values=['None', 'Even', 'Odd'])
@@ -67,11 +72,11 @@ def create_uart_tab(parent_tab, app):
         combo_transfer = ttk.Combobox(frame, state="readonly", values=['Polling', 'Interrupt', 'DMA'])
         combo_transfer.set('Polling')
         combo_transfer.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
-        widgets['transfer_mode'] = combo_transfer # Add to the widgets dictionary
+        widgets['transfer_mode'] = combo_transfer  # importante: chave igual à esperada no handler
 
-        # Make widget columns expandable
+        # Tornar colunas expansíveis
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(3, weight=1)
-        
-        # Store the dictionary of widgets for this instance
+
+        # Guarda widgets desta instância
         app.uart_widgets[instance_name] = widgets

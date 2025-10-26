@@ -136,7 +136,7 @@ def generate_i2c_config(i2c_pinout_blocks: list[dict], i2c_settings: dict) -> li
             "transferMode": instance_settings.get("transferMode", "POLLING"),
             "own_address1": "0",
             "own_address2": "0",
-            "own_address2_masks": "I2C_OA2MSK_NOMASK",
+            "own_address2_masks": "I2C_OAR2_OA2NOMASK",
             "general_call_mode": "I2C_GENERALCALL_DISABLE",
             "no_stretch_mode": "I2C_NOSTRETCH_DISABLE",
             "scl_port_char": scl_pin_data['port'][4],

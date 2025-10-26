@@ -1,25 +1,16 @@
 {
   "I2C": {
     "I2C1": {
-      "clockSpeed": 400000,
+      "clockSpeed": 100000,
       "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
-      "transferMode": "INTERRUPT",
-      "devices": [
-        {
-          "name": "SENSOR",
-          "address": 74
-        }
-      ]
-    }
-  },
-  "UART": {
-    "UART1": {
-      "baudRate": 115200,
-      "wordLength": "UART_WORDLENGTH_8B",
-      "stopBits": "UART_STOPBITS_1",
-      "parity": "UART_PARITY_NONE",
-      "flowControl": "UART_HWCONTROL_NONE",
-      "transferMode": "POLLING"
+      "transferMode": "POLLING",
+      "devices": []
+    },
+    "I2C2": {
+      "clockSpeed": 100000,
+      "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
+      "transferMode": "POLLING",
+      "devices": []
     }
   }
 }

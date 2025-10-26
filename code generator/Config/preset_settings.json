@@ -1,0 +1,14 @@
+{
+  "input": "GY-521 Sensor",
+  "output": "LCD 16x2",
+  "convert": false,
+  "peripheral_settings": {
+    "input_peripheral": {
+      "type": "I2C",
+      "instance": "I2C1",
+      "clockSpeed": 100000,
+      "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
+      "transferMode": "POLLING"
+    }
+  }
+}
