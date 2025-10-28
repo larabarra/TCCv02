@@ -1,54 +1,34 @@
 {
   "project_name": "MyProject",
   "microcontroller": "STM32G474RE",
-  "peripherals": [
+  "gpio": [
     {
-      "type": "I2C",
-      "instance": "I2C1",
-      "pins": [
-        {
-          "name": "I2C1_SCL",
-          "port": "GPIOB",
-          "pin": 6,
-          "mode": "AF_OD",
-          "pull": "PULLUP",
-          "speed": "VERY_HIGH",
-          "alternate_fn": 4
-        },
-        {
-          "name": "I2C1_SDA",
-          "port": "GPIOB",
-          "pin": 7,
-          "mode": "AF_OD",
-          "pull": "PULLUP",
-          "speed": "VERY_HIGH",
-          "alternate_fn": 4
-        }
-      ]
+      "name": "GY521_SCL",
+      "port": "GPIOB",
+      "pin": 6,
+      "mode": "AF_OD",
+      "pull": "PULLUP",
+      "speed": "VERY_HIGH",
+      "alternate_fn": 4
     },
     {
-      "type": "I2C",
-      "instance": "I2C2",
-      "pins": [
-        {
-          "name": "I2C2_SCL",
-          "port": "GPIOB",
-          "pin": 10,
-          "mode": "AF_OD",
-          "pull": "PULLUP",
-          "speed": "VERY_HIGH",
-          "alternate_fn": 4
-        },
-        {
-          "name": "I2C2_SDA",
-          "port": "GPIOB",
-          "pin": 11,
-          "mode": "AF_OD",
-          "pull": "PULLUP",
-          "speed": "VERY_HIGH",
-          "alternate_fn": 4
-        }
-      ]
+      "name": "GY521_SDA",
+      "port": "GPIOB",
+      "pin": 7,
+      "mode": "AF_OD",
+      "pull": "PULLUP",
+      "speed": "VERY_HIGH",
+      "alternate_fn": 4
     }
-  ]
+  ],
+  "artifact_manifest": {
+    "peripheral_settings": {
+      "present": true,
+      "filename": "peripheral_settings.json"
+    },
+    "preset_settings": {
+      "present": true,
+      "filename": "preset_settings.json"
+    }
+  }
 }

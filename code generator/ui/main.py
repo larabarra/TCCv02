@@ -52,6 +52,9 @@ class App(tk.Tk):
         self.update_peripheral_tabs_state()
         pinout_handler.on_type_change(self)
 
+        self.use_cases = []        # lista de casos de uso selecionados
+        self.last_use_case = None  # opcional: referência ao último aplicado
+
     def _build_ui(self):
         # --- Top frame ---
         top = ttk.Frame(self, padding=8); top.pack(fill="x")

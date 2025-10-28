@@ -75,28 +75,30 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 
-def generate_gpio_config(config_blocks: list[dict]) -> list[str]:
+def generate_gpio_config(pinout_data_or_blocks) -> list[str]:
     """
-    Generates gpio.c and gpio.h files based on a list of GPIO configuration blocks.
-
-    Args:
-        config_blocks (list[dict]): A list of dictionaries, where each dictionary
-                                    represents a peripheral and contains a 'pins' key.
-
-    Returns:
-        list[str]: A list containing the string paths of the generated .c and .h files.
+    Gera gpio.c/.h a partir do novo formato 'pinout_config.json' (campo 'gpio')
+    ou, por compatibilidade, de uma lista antiga de blocos com 'pins'.
     """
-    # Extract all pin configurations from the different peripheral blocks into a single list.
+    # --- 1) Coleta de pinos (suporta novo e antigo formato) ---
     all_pins = []
-    for peripheral_dict in config_blocks:
-        all_pins.extend(peripheral_dict.get("pins", []))
-    
-    # Create the context dictionary to pass data to the Jinja2 templates.
+
+    # NOVO formato: dict com 'gpio': [...]
+    if isinstance(pinout_data_or_blocks, dict) and "gpio" in pinout_data_or_blocks:
+        all_pins = list(pinout_data_or_blocks.get("gpio", []))
+
+    # COMPAT: antigo formato: lista de blocos {"pins":[...]}
+    elif isinstance(pinout_data_or_blocks, list):
+        for peripheral_dict in pinout_data_or_blocks:
+            all_pins.extend(peripheral_dict.get("pins", []))
+
+    else:
+        # último fallback: nada
+        all_pins = []
+
+    # --- 2) Contexto para o template (sem mudanças) ---
     context = {
         "pins": all_pins,
-        
-        # Mapping dictionaries to convert UI strings to HAL-compatible definitions.
-        # This allows the templates to be clean and readable.
         "map_mode": {
             "INPUT":     "GPIO_MODE_INPUT",
             "OUTPUT_PP": "GPIO_MODE_OUTPUT_PP",
@@ -118,9 +120,6 @@ def generate_gpio_config(config_blocks: list[dict]) -> list[str]:
         }
     }
 
-    # Render the header and source files.
     out_h_path = _render_and_save(TEMPLATE_H_NAME, context, OUT_INC_PATH)
     out_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)
-    
-    # Return the paths of the generated files.
     return [str(out_c_path), str(out_h_path)]

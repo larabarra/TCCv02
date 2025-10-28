@@ -1,0 +1,168 @@
+/*
+ * 
+ */
+#include "presets_in.h"
+
+/* =========================
+ *  GY-521 (MPU6050) - MPU6050 Register definitions
+ * ========================= */
+#define MPU6050_REG_SMPLRT_DIV      0x19
+#define MPU6050_REG_PWR_MGMT_1     0x6B
+#define MPU6050_REG_ACCEL_CFG       0x1C
+#define MPU6050_REG_GYRO_CFG        0x1B
+#define MPU6050_REG_ACCEL_XOUT      0x3B
+#define MPU6050_REG_GYRO_XOUT       0x43
+#define MPU6050_REG_WHO_AM_I        0x75
+#define MPU6050_WHOAMI_VALUE        0x68
+
+/* DHT11 Data structure */
+typedef struct {
+    HAL_StatusTypeDef status;
+    uint8_t hum_int;
+    uint8_t hum_dec;
+    uint8_t temp_int;
+    uint8_t temp_dec;
+} DHT11_Data_t;
+
+/* =========================
+ *  GY-521 (MPU6050)
+ * ========================= */
+{% if include_gy521 and gy521_list %}
+{% for d in gy521_list %}
+#define _MPU6050_HI2C   {{ d.handle }}
+#define _MPU6050_ADDR   {{ d.addr_macro }}
+
+HAL_StatusTypeDef MPU6050_Init_I2C{{ d.num }}(void)
+{
+    uint8_t check = 0;
+    uint8_t data  = 0;
+
+    if (HAL_I2C_Mem_Read(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_WHO_AM_I, 1, &check, 1, 1000) != HAL_OK)
+        return HAL_ERROR;
+    if (check != MPU6050_WHOAMI_VALUE)
+        return HAL_ERROR;
+
+    data = 0x00;  // wake up
+    if (HAL_I2C_Mem_Write(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_PWR_MGMT_1, 1, &data, 1, 1000) != HAL_OK)
+        return HAL_ERROR;
+
+    data = 0x07;  // sample rate
+    if (HAL_I2C_Mem_Write(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_SMPLRT_DIV, 1, &data, 1, 1000) != HAL_OK)
+        return HAL_ERROR;
+
+    data = 0x00;  // accel ±2g
+    if (HAL_I2C_Mem_Write(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_ACCEL_CFG, 1, &data, 1, 1000) != HAL_OK)
+        return HAL_ERROR;
+
+    data = 0x00;  // gyro ±250 dps
+    if (HAL_I2C_Mem_Write(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_GYRO_CFG, 1, &data, 1, 1000) != HAL_OK)
+        return HAL_ERROR;
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef MPU6050_Read_Accel_I2C{{ d.num }}(int16_t* ax, int16_t* ay, int16_t* az, float* Ax_g, float* Ay_g, float* Az_g)
+{
+    uint8_t r[6];
+    if (HAL_I2C_Mem_Read(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_ACCEL_XOUT, 1, r, 6, 1000) != HAL_OK)
+        return HAL_ERROR;
+
+    int16_t ax_raw = (int16_t)((r[0] << 8) | r[1]);
+    int16_t ay_raw = (int16_t)((r[2] << 8) | r[3]);
+    int16_t az_raw = (int16_t)((r[4] << 8) | r[5]);
+
+    if (ax) *ax = ax_raw; if (ay) *ay = ay_raw; if (az) *az = az_raw;
+    if (Ax_g) *Ax_g = (float)ax_raw / 16384.0f;
+    if (Ay_g) *Ay_g = (float)ay_raw / 16384.0f;
+    if (Az_g) *Az_g = (float)az_raw / 16384.0f;
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef MPU6050_Read_Gyro_I2C{{ d.num }}(int16_t* gx, int16_t* gy, int16_t* gz, float* Gx_dps, float* Gy_dps, float* Gz_dps)
+{
+    uint8_t r[6];
+    if (HAL_I2C_Mem_Read(&_MPU6050_HI2C, _MPU6050_ADDR, MPU6050_REG_GYRO_XOUT, 1, r, 6, 1000) != HAL_OK)
+        return HAL_ERROR;
+
+    int16_t gx_raw = (int16_t)((r[0] << 8) | r[1]);
+    int16_t gy_raw = (int16_t)((r[2] << 8) | r[3]);
+    int16_t gz_raw = (int16_t)((r[4] << 8) | r[5]);
+
+    if (gx) *gx = gx_raw; if (gy) *gy = gy_raw; if (gz) *gz = gz_raw;
+    if (Gx_dps) *Gx_dps = (float)gx_raw / 131.0f;
+    if (Gy_dps) *Gy_dps = (float)gy_raw / 131.0f;
+    if (Gz_dps) *Gz_dps = (float)gz_raw / 131.0f;
+
+    return HAL_OK;
+}
+
+#undef _MPU6050_HI2C
+#undef _MPU6050_ADDR
+
+{% endfor %}
+{% endif %}
+
+
+/* =========================
+ *  Digital Input genérico
+ * ========================= */
+{% if include_din and din_pin %}
+GPIO_PinState DI_Read_{{ din_pin.name }}(void)
+{
+    return HAL_GPIO_ReadPin({{ din_pin.port }}, GPIO_PIN_{{ din_pin.pin }});
+}
+{% endif %}
+
+
+/* =========================
+ *  DHT11 — stub simples (podemos refinar bit-bang depois)
+ * ========================= */
+{% if include_dht11 and dht_pin %}
+DHT11_Data_t DHT11_Read_{{ dht_pin.name }}(void)
+{
+    DHT11_Data_t out = {0};
+    /* TODO: implementar bit-bang do DHT11 em {{ dht_pin.port }}, PIN {{ dht_pin.pin }}.
+       Coloquei stub que retorna HAL_ERROR para não travar a build. */
+    out.status = HAL_ERROR;
+    return out;
+}
+{% endif %}
+
+
+/* =========================
+ *  KY-013 (ADC) e Potenciômetro (ADC)
+ * ========================= */
+{% if include_ky013 %}
+HAL_StatusTypeDef KY013_ReadRaw(ADC_HandleTypeDef* hadc, uint32_t channel, uint16_t* out_raw)
+{
+    if (!hadc || !out_raw) return HAL_ERROR;
+    HAL_ADC_ConfigChannel(hadc, &(ADC_ChannelConfTypeDef){ .Channel=channel, .Rank=ADC_REGULAR_RANK_1, .SamplingTime=ADC_SAMPLETIME_47CYCLES_5 });
+    if (HAL_ADC_Start(hadc) != HAL_OK) return HAL_ERROR;
+    if (HAL_ADC_PollForConversion(hadc, 10) != HAL_OK) return HAL_ERROR;
+    *out_raw = (uint16_t)HAL_ADC_GetValue(hadc);
+    HAL_ADC_Stop(hadc);
+    return HAL_OK;
+}
+float KY013_RawToVoltage(uint16_t raw, float vref)
+{
+    return ( (float)raw / 4095.0f ) * vref;
+}
+{% endif %}
+
+{% if include_pot %}
+HAL_StatusTypeDef POT_ReadRaw(ADC_HandleTypeDef* hadc, uint32_t channel, uint16_t* out_raw)
+{
+    if (!hadc || !out_raw) return HAL_ERROR;
+    HAL_ADC_ConfigChannel(hadc, &(ADC_ChannelConfTypeDef){ .Channel=channel, .Rank=ADC_REGULAR_RANK_1, .SamplingTime=ADC_SAMPLETIME_47CYCLES_5 });
+    if (HAL_ADC_Start(hadc) != HAL_OK) return HAL_ERROR;
+    if (HAL_ADC_PollForConversion(hadc, 10) != HAL_OK) return HAL_ERROR;
+    *out_raw = (uint16_t)HAL_ADC_GetValue(hadc);
+    HAL_ADC_Stop(hadc);
+    return HAL_OK;
+}
+float POT_RawToRatio(uint16_t raw)
+{
+    return (float)raw / 4095.0f;
+}
+{% endif %}

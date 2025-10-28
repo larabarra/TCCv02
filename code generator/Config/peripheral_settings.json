@@ -4,13 +4,16 @@
       "clockSpeed": 100000,
       "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
       "transferMode": "POLLING",
-      "devices": []
-    },
-    "I2C2": {
-      "clockSpeed": 100000,
-      "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
-      "transferMode": "POLLING",
-      "devices": []
+      "devices": [
+        {
+          "name": "GY521_MPU6050",
+          "address": 104
+        },
+        {
+          "name": "LCD_PCF8574",
+          "address": 39
+        }
+      ]
     }
   }
 }
