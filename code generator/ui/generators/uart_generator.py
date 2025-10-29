@@ -89,76 +89,47 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 
-def generate_uart_config(uart_pinout_blocks: list[dict], uart_settings: dict) -> list[str]:
-    """
-    Generates uart.c and uart.h files by merging pinout data with peripheral settings.
+def _map_uart_interface_name(instance: str) -> str:
+    s = (instance or "").upper()
+    if s == "UART1": return "USART1"
+    if s == "UART2": return "USART2"
+    return s  
 
+def generate_uart_config(a, b=None) -> list[str]:
+    """Generate UART configuration files.
+    
     Args:
-        uart_pinout_blocks (list[dict]): A list of pinout configs for UART instances.
-        uart_settings (dict): A dictionary with operational settings for UART instances.
-
-    Returns:
-        list[str]: A list of paths to the generated files.
-    """
-    uart_interfaces = []
-
-    for block in uart_pinout_blocks:
-        instance = block.get('instance')
-        pins_list = block.get('pins', [])
-        if not instance: continue
-
-        instance_settings = uart_settings.get(instance, {})
-        if not instance_settings:
-            print(f"WARNING: No peripheral settings found for {instance}. Using defaults.")
-
-        # Find TX and RX pins for this instance
-        tx_pin = next((p for p in pins_list if 'TX' in p.get('name', '').upper()), None)
-        rx_pin = next((p for p in pins_list if 'RX' in p.get('name', '').upper()), None)
-
-        # Deduce the operational mode based on which pins are configured
-        if tx_pin and rx_pin:
-            mode = "UART_MODE_TX_RX"
-        elif tx_pin:
-            mode = "UART_MODE_TX"
-        elif rx_pin:
-            mode = "UART_MODE_RX"
-        else:
-            print(f"ERROR: No TX or RX pins found for {instance}. Skipping.")
-            continue
-
-        interface_context = {
-            "num": _get_digits(instance),
-            "interface": instance.replace("UART", "USART"), # HAL uses USARTx
-            
-            # Get settings from peripheral_settings.json, with safe defaults
-            "baud_rate": instance_settings.get("baudRate", 115200),
-            "word_length": instance_settings.get("wordLength", "UART_WORDLENGTH_8B"),
-            "stop_bits": instance_settings.get("stopBits", "UART_STOPBITS_1"),
-            "parity": instance_settings.get("parity", "UART_PARITY_NONE"),
-            "hw_flow_ctl": instance_settings.get("flowControl", "UART_HWCONTROL_NONE"),
-            "transferMode": instance_settings.get("transferMode", "POLLING"),
-            # Use the automatically deduced mode
-            "mode": mode,
-
-            # Add fixed default values for advanced parameters
-            "oversampling": "UART_OVERSAMPLING_16",
-            
-            # Store pin data if it exists
-            "tx_pin": tx_pin,
-            "rx_pin": rx_pin,
-        }
+        a: UART settings dictionary.
+        b: Legacy parameter (unused).
         
-        uart_interfaces.append(interface_context)
+    Returns:
+        List of generated file paths.
+    """
+    # Detect new/old mode
+    if isinstance(a, dict):
+        uart_settings = a
 
-    if not uart_interfaces:
+    if not uart_settings:
         return []
 
-    context = {
-        "uart_interfaces": uart_interfaces,
-        "now": datetime.now
-    }
-    
+    uart_interfaces = []
+    for instance, inst_set in uart_settings.items():
+        iface = _map_uart_interface_name(instance)
+        uart_interfaces.append({
+            "num": "".join([c for c in instance if c.isdigit()]),
+            "interface": iface,  # USART1/2/3 ou UART4
+            "baud_rate": inst_set.get("baudRate", 115200),
+            "word_length": inst_set.get("wordLength", "UART_WORDLENGTH_8B"),
+            "stop_bits": inst_set.get("stopBits", "UART_STOPBITS_1"),
+            "parity": inst_set.get("parity", "UART_PARITY_NONE"),
+            "hw_flow_ctl": inst_set.get("flowControl", "UART_HWCONTROL_NONE"),
+            "transferMode": (inst_set.get("transferMode") or "POLLING").upper(),
+            "mode": inst_set.get("mode", "UART_MODE_TX_RX"),
+            "oversampling": "UART_OVERSAMPLING_16",
+        })
+
+    context = { "uart_interfaces": uart_interfaces, "now": datetime.now }
+
     out_h_path = _render_and_save(TEMPLATE_H_NAME, context, OUT_INC_PATH)
     out_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)
-
     return [str(out_c_path), str(out_h_path)]

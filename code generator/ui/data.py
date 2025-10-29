@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 import json
 
-THIS = Path(__file__).resolve()               # .../TCCV02/code generator/ui/gpio_generator.py
-GEN_DIR = THIS.parent.parent                         # .../TCCV02/code generator/
-PROJ_ROOT = GEN_DIR.parent.parent.parent                    # .../TCCv02
+THIS = Path(__file__).resolve()             
+GEN_DIR = THIS.parent.parent                       
+PROJ_ROOT = GEN_DIR.parent.parent.parent                   
 PATH_PIN = GEN_DIR / "Mappings" / "pin_map.json"
 PATH_HAL = GEN_DIR / "Mappings" / "hal_map.json"
+PATH_PRESETS = GEN_DIR / "Mappings" / "presets.json"
+
 # Default peripheral types for the main dropdown.
 DEFAULT_TYPES = ["GPIO", "I2C", "UART", "SPI", "ADC"]
 
@@ -49,4 +51,15 @@ def load_hal_mappings():
         return False
     except json.JSONDecodeError:
         print(f"Error: Could not decode JSON from {PATH_HAL}.")
+        return False
+
+def load_presets():
+    """Loads the presets configuration file."""
+    global PRESETS
+    try:
+        with open(PATH_PRESETS, "r", encoding="utf-8") as f:
+            PRESETS = json.load(f)
+        return True
+    except Exception as e:
+        print(f"Warning: Could not load from {PATH_PRESETS}: {e}")
         return False

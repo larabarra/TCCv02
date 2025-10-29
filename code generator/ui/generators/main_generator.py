@@ -46,7 +46,7 @@ def _get_digits(s: str) -> str:
     m = re.findall(r"\d+", s or "")
     return m[0] if m else ""
 
-def generate_main_files(pinout_config: dict, peripheral_settings: dict) -> list[str]:
+def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_settings: dict | None = None) -> list[str]:
     """
     Analyzes the user's configuration and generates main.c and main.h files
     with relevant example tasks and pin definitions.
@@ -63,6 +63,8 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict) -> list[
         "uart_example_needed": False,
         "first_gpio_input": None,
         "first_gpio_output": None,
+        "preset_example_needed": False,
+        "preset_cases": [],
     }
 
     pinout_blocks = pinout_config.get("peripherals", [])
@@ -101,6 +103,65 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict) -> list[
         context["uart_example_needed"] = True
         first_uart_instance = context["uart_interfaces"][0].get("instance")
         context["uart_interfaces"][0]["num"] = _get_digits(first_uart_instance)
+    
+    # 3b. Check for preset cases
+    if preset_settings and preset_settings.get("cases"):
+        cases = preset_settings.get("cases", [])
+        if cases:
+            context["preset_example_needed"] = True
+            context["preset_cases"] = cases
+            
+            # Extract input/output type for easier template logic
+            for case in cases:
+                input_key = case.get("input_key", "").lower()
+                output_key = case.get("output_key", "").lower()
+                
+                # Detect input type
+                if "gy-521" in input_key or "mpu6050" in input_key:
+                    case["input_type"] = "gy521"
+                elif "potentiometer" in input_key or "pot" in input_key:
+                    case["input_type"] = "potentiometer"
+                elif "digital input" in input_key or "din" in input_key:
+                    case["input_type"] = "digital_in"
+                elif "dht11" in input_key:
+                    case["input_type"] = "dht11"
+                elif "ky-013" in input_key or "ky013" in input_key:
+                    case["input_type"] = "ky013"
+                else:
+                    case["input_type"] = "unknown"
+                
+                # Detect output type
+                if "lcd" in output_key:
+                    case["output_type"] = "lcd"
+                elif "uart" in output_key:
+                    case["output_type"] = "uart"
+                elif "pwm" in output_key:
+                    case["output_type"] = "pwm"
+                elif "digital output" in output_key or "led" in output_key:
+                    case["output_type"] = "digital_out"
+                else:
+                    case["output_type"] = "unknown"
+                
+                # Extract peripheral info
+                ps = case.get("peripheral_settings", {})
+                in_periph = ps.get("input_peripheral", {})
+                out_periph = ps.get("output_peripheral", {})
+                
+                # Store device info for inputs
+                if in_periph.get("type") == "I2C":
+                    devices = in_periph.get("settings", {}).get("devices", [])
+                    case["input_device"] = devices[0].get("name", "") if devices else ""
+                    case["input_address"] = devices[0].get("address", "") if devices else ""
+                
+                # Store device info for outputs
+                if out_periph.get("type") == "I2C":
+                    devices = out_periph.get("settings", {}).get("devices", [])
+                    case["output_device"] = devices[0].get("name", "") if devices else ""
+                    case["output_address"] = devices[0].get("address", "") if devices else ""
+                elif out_periph.get("type") in ["UART", "USART"]:
+                    case["output_uart_instance"] = out_periph.get("instance", "UART1")
+                elif out_periph.get("type") == "TIM":
+                    case["output_tim_instance"] = out_periph.get("instance", "TIM1")
 
     # 4. Render and save both main.c and main.h
     main_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)

@@ -1,0 +1,103 @@
+{
+  "mappings": {
+    "Digital Input": {
+      "direction": "input",
+      "type": "GPIO",
+      "pins": [
+        { "pin_choice": "PA0", "label": "INPUT_PIN", "mode": "INPUT", "pull": "PULLUP" }
+      ]
+    },
+    "Potentiometer (ADC)": {
+      "direction": "input",
+      "type": "ADC",
+      "instance": "ADC1",
+      "pins": [
+        { "role": "ADC_IN1", "pin_choice": "PA0", "label": "POT_ADC" }
+      ]
+    },
+    "DHT11 Humidity & Temp Sensor": {
+      "direction": "input",
+      "type": "GPIO",
+      "pins": [
+        { "pin_choice": "PA1", "label": "DHT11_DATA", "mode": "OUTPUT_OD", "pull": "NOPULL" }
+      ]
+    },
+    "KY-013 Analog Temp Sensor": {
+      "direction": "input",
+      "type": "ADC",
+      "instance": "ADC1",
+      "pins": [
+        { "role": "ADC_IN5", "pin_choice": "PA4", "label": "KY013_TEMP_ADC" }
+      ]
+    },
+    "Digital Output (LED)": {
+      "direction": "output",
+      "type": "GPIO",
+      "pins": [
+        { "pin_choice": "PC13", "label": "OUTPUT_LED", "mode": "OUTPUT_PP", "pull": "NOPULL" }
+      ]
+    },
+    "UART": {
+      "direction": "output",
+      "type": "UART",
+      "instance": "UART2",
+      "label_prefix": "DEBUG",
+      "pins": [
+        { "role": "tx", "pin_choice": "PA2" },
+        { "role": "rx", "pin_choice": "PA3" }
+      ],
+      "settings": {
+        "baudRate": "115200",
+        "wordLength": "8 Bits",
+        "stopBits": "1",
+        "parity": "None",
+        "flowControl": "None",
+        "transferMode": "Polling"
+      }
+    },
+    "PWM": {
+      "direction": "output",
+      "type": "TIM",
+      "instance": "TIM2",
+      "pins": [
+        { "role": "CH1", "pin_choice": "PA15", "label": "PWM_OUTPUT" }
+      ]
+    },
+    "GY-521 Sensor": {
+      "direction": "input",
+      "type": "I2C",
+      "instance": "I2C1",
+      "label_prefix": "GY521",
+      "pins": [
+        { "role": "scl", "pin_choice": "PB6" },
+        { "role": "sda", "pin_choice": "PB7" }
+      ],
+      "settings": {
+        "clockSpeed": "100 kHz (Standard)",
+        "addressingMode": "7-bit",
+        "transferMode": "Polling",
+        "devices": [
+          { "name": "GY521_MPU6050", "address": "0x68" }
+        ]
+      }
+    },
+    "LCD 20x4 (I2C)": {
+      "direction": "output",
+      "type": "I2C",
+      "instance": "I2C1",
+      "label_prefix": "LCD_DISPLAY",
+      "pins": [
+        { "role": "scl", "pin_choice": "PB6" },
+        { "role": "sda", "pin_choice": "PB7" }
+      ],
+      "settings": {
+        "clockSpeed": "100 kHz (Standard)",
+        "addressingMode": "7-bit",
+        "transferMode": "Polling",
+        "devices": [
+          { "name": "LCD_PCF8574", "address": "0x27" }
+        ]
+      }
+    }
+  }
+}

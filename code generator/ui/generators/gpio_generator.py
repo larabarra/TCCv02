@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 from pathlib import Path
+from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 # --- Path Definitions ---
@@ -75,28 +76,37 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 
-def generate_gpio_config(config_blocks: list[dict]) -> list[str]:
+def generate_gpio_config(pinout_data_or_blocks) -> list[str]:
     """
-    Generates gpio.c and gpio.h files based on a list of GPIO configuration blocks.
-
-    Args:
-        config_blocks (list[dict]): A list of dictionaries, where each dictionary
-                                    represents a peripheral and contains a 'pins' key.
-
-    Returns:
-        list[str]: A list containing the string paths of the generated .c and .h files.
-    """
-    # Extract all pin configurations from the different peripheral blocks into a single list.
-    all_pins = []
-    for peripheral_dict in config_blocks:
-        all_pins.extend(peripheral_dict.get("pins", []))
+    Generates gpio.c/.h files from the new 'pinout_config.json' format (field 'gpio')
+    or, for backward compatibility, from an old list of blocks with 'pins'.
     
-    # Create the context dictionary to pass data to the Jinja2 templates.
-    context = {
-        "pins": all_pins,
+    Args:
+        pinout_data_or_blocks: Either a dict with 'gpio' field or a list of peripheral blocks.
         
-        # Mapping dictionaries to convert UI strings to HAL-compatible definitions.
-        # This allows the templates to be clean and readable.
+    Returns:
+        List of generated file paths.
+    """
+    # Collect pins (supports both new and old format)
+    all_pins = []
+
+    # NEW format: dict with 'gpio': [...]
+    if isinstance(pinout_data_or_blocks, dict) and "gpio" in pinout_data_or_blocks:
+        all_pins = list(pinout_data_or_blocks.get("gpio", []))
+
+    # COMPAT: old format: list of blocks {"pins":[...]}
+    elif isinstance(pinout_data_or_blocks, list):
+        for peripheral_dict in pinout_data_or_blocks:
+            all_pins.extend(peripheral_dict.get("pins", []))
+
+    else:
+        # Last fallback: empty
+        all_pins = []
+
+    # Build context for template
+    context = {
+        "now": datetime.now,
+        "pins": all_pins,
         "map_mode": {
             "INPUT":     "GPIO_MODE_INPUT",
             "OUTPUT_PP": "GPIO_MODE_OUTPUT_PP",
@@ -118,9 +128,6 @@ def generate_gpio_config(config_blocks: list[dict]) -> list[str]:
         }
     }
 
-    # Render the header and source files.
     out_h_path = _render_and_save(TEMPLATE_H_NAME, context, OUT_INC_PATH)
     out_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)
-    
-    # Return the paths of the generated files.
     return [str(out_c_path), str(out_h_path)]

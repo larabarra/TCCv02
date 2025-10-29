@@ -28,5 +28,26 @@
       "None": "UART_HWCONTROL_NONE",
       "RTS/CTS": "UART_HWCONTROL_RTS_CTS"
     }
+  },
+  "GPIO": {
+    "mode": {
+      "INPUT":     "GPIO_MODE_INPUT",
+      "OUTPUT_PP": "GPIO_MODE_OUTPUT_PP",
+      "OUTPUT_OD": "GPIO_MODE_OUTPUT_OD",
+      "AF_PP":     "GPIO_MODE_AF_PP",
+      "AF_OD":     "GPIO_MODE_AF_OD",
+      "ANALOG":    "GPIO_MODE_ANALOG"
+    },
+    "pull": {
+      "NOPULL":   "GPIO_NOPULL",
+      "PULLUP":   "GPIO_PULLUP",
+      "PULLDOWN": "GPIO_PULLDOWN"
+    },
+    "speed": {
+      "LOW":       "GPIO_SPEED_FREQ_LOW",
+      "MEDIUM":    "GPIO_SPEED_FREQ_MEDIUM",
+      "HIGH":      "GPIO_SPEED_FREQ_HIGH",
+      "VERY_HIGH": "GPIO_SPEED_FREQ_VERY_HIGH"
+    }
   }
 }
