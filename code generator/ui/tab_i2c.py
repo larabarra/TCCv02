@@ -3,16 +3,15 @@ import tkinter as tk
 from tkinter import ttk
 
 def create_i2c_tab(parent_tab, app):
-    """
-    Creates and populates the I2C tab with configuration frames for each I2C instance.
+    """Creates and populates the I2C tab with configuration frames for each I2C instance.
 
-    - Registra widgets em app.i2c_widgets["I2Cx"] com as chaves:
+    - Registers widgets in app.i2c_widgets["I2Cx"] with keys:
       ['speed', 'addr_mode', 'transfer', 'devices_tree', 'dev_name_entry', 'dev_addr_entry']
-    - Cria frames em app.i2c_frames["I2Cx"].
-    - Botões Add/Remove chamam app.add_i2c_device(inst) e app.remove_i2c_device(inst) se existirem.
-    - Compatível com use_case_handler.apply_use_case() (preenche speed/addr_mode/transfer e devices).
+    - Creates frames in app.i2c_frames["I2Cx"].
+    - Add/Remove buttons call app.add_i2c_device(inst) and app.remove_i2c_device(inst) if they exist.
+    - Compatible with use_case_handler.apply_use_case() (fills speed/addr_mode/transfer and devices).
     """
-    # Dicionários de estado da app (garante que existam)
+    # App state dictionaries (ensures they exist)
     if not hasattr(app, "i2c_widgets"):
         app.i2c_widgets = {}
     if not hasattr(app, "i2c_frames"):
@@ -58,7 +57,7 @@ def create_i2c_tab(parent_tab, app):
         devices_frame = ttk.LabelFrame(instance_frame, text="Connected Slave Devices", padding=10)
         devices_frame.pack(fill="x", pady=(5, 0))
 
-        # Entradas para adicionar device
+        # Entries for adding device
         ttk.Label(devices_frame, text="Name (for #define):").grid(row=0, column=0, sticky="w", padx=5)
         entry_name = ttk.Entry(devices_frame)
         entry_name.grid(row=1, column=0, sticky="ew", padx=5, pady=2)
@@ -69,7 +68,7 @@ def create_i2c_tab(parent_tab, app):
         entry_addr.grid(row=1, column=1, sticky="w", padx=5, pady=2)
         widgets['dev_addr_entry'] = entry_addr
 
-        # Lista de devices
+        # Device list
         tree = ttk.Treeview(devices_frame, columns=("name", "addr"), show="headings", height=4)
         tree.heading("name", text="Device Name")
         tree.heading("addr", text="Address")
@@ -78,12 +77,12 @@ def create_i2c_tab(parent_tab, app):
         tree.grid(row=0, column=2, rowspan=3, sticky="nsew", padx=10, pady=2)
         widgets['devices_tree'] = tree
 
-        # Scroll vertical para a tree (opcional mas útil)
+        # Vertical scrollbar for tree (optional but useful)
         vsb = ttk.Scrollbar(devices_frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=vsb.set)
         vsb.grid(row=0, column=3, rowspan=3, sticky="ns", padx=(0,5), pady=2)
 
-        # Botões Add/Remove
+        # Add/Remove buttons
         btn_frame = ttk.Frame(devices_frame)
         btn_frame.grid(row=0, column=4, rowspan=3, sticky="ns", padx=5)
 
@@ -96,8 +95,8 @@ def create_i2c_tab(parent_tab, app):
         del_btn = ttk.Button(btn_frame, text="Remove", command=del_cmd)
         del_btn.pack(pady=2, fill="x")
 
-        # Layout expandível
+        # Expandable layout
         devices_frame.columnconfigure(2, weight=1)
 
-        # Guarda widgets desta instância
+        # Store widgets for this instance
         app.i2c_widgets[instance_name] = widgets

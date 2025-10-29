@@ -5,45 +5,65 @@ import utils
 
 # ============================ UI helpers ============================
 
-def toggle_formula_field(app):
-    """Habilita/Desabilita o campo de fórmula conforme o checkbox."""
-    if hasattr(app, "var_convert") and hasattr(app, "ent_formula") and app.var_convert and app.ent_formula:
-        state = "normal" if app.var_convert.get() else "disabled"
-        app.ent_formula.config(state=state)
+def toggle_formula_field(app, event=None):
+    """Shows/enables the formula field only for ADC-related inputs (Potentiometer, KY-013)."""
+    if hasattr(app, "cmb_preset_input") and hasattr(app, "var_convert") and hasattr(app, "ent_formula") and hasattr(app, "chk_convert"):
+        if app.cmb_preset_input and app.var_convert and app.ent_formula and app.chk_convert:
+            selected_input = app.cmb_preset_input.get()
+            # Only ADC-related inputs can use formulas
+            is_adc = "Potentiometer" in selected_input or "KY-013" in selected_input or "KY013" in selected_input
+            
+            if is_adc:
+                # Show the checkbox and formula field for ADC inputs
+                app.chk_convert.pack(anchor="w", pady=(0, 0))
+                app.ent_formula.config(state="disabled" if not app.var_convert.get() else "normal")
+            else:
+                # Hide the checkbox and formula field for non-ADC inputs
+                app.chk_convert.pack_forget()
+                # Keep ent_formula but hide it
+                if hasattr(app, "ent_formula"):
+                    state = app.ent_formula.cget("state")
+                    if state == "normal":
+                        app.ent_formula.config(state="disabled")
+                app.var_convert.set(False)  # Reset checkbox
 
 def toggle_threshold_field(app, event=None):
-    """Mostra/Esconde o campo de threshold conforme a saída escolhida."""
+    """Shows/hides the threshold field based on the selected output.
+    Threshold is only available for Digital Output (LED) / GPIO outputs.
+    """
     if hasattr(app, "cmb_preset_output") and hasattr(app, "frm_threshold") and app.cmb_preset_output and app.frm_threshold:
-        is_visible = app.cmb_preset_output.get() in ["Digital Output (LED)", "PWM"]
+        selected_output = app.cmb_preset_output.get()
+        # Threshold is only available for Digital Output (LED) / GPIO
+        is_visible = selected_output == "Digital Output (LED)"
         if is_visible:
             app.frm_threshold.pack(fill="x", pady=(10, 0))
         else:
             app.frm_threshold.pack_forget()
 
-# ============================ helpers internas ============================
+# ============================ Internal helpers ============================
 
 def _reset_ui_for_new_case(app):
-    """Modo 'um caso por vez': limpa seleção de pinos e zera listas de devices nas abas."""
-    # limpa pinout selecionado
+    """One case at a time mode: clears pin selection and zeros device lists in tabs."""
+    # Clear selected pinout
     app.selections = []
-    # limpa tree, se existir
+    # Clear tree if it exists
     if hasattr(app, "tree") and app.tree is not None:
         try:
             app.tree.delete(*app.tree.get_children())
         except Exception:
             pass
-    # limpa devices das abas I2C
+    # Clear I2C tab devices
     if hasattr(app, "i2c_widgets"):
         for _inst, w in app.i2c_widgets.items():
             tree = w.get("devices_tree")
             if tree:
                 for iid in tree.get_children():
                     tree.delete(iid)
-    # zera config em memória
+    # Reset config in memory
     app.use_case_config = None
 
 def _find_selection_by_pin(app, pin_str: str):
-    """Retorna o registro já existente em app.selections para esse pino (ou None)."""
+    """Returns the existing record in app.selections for this pin (or None)."""
     try:
         port, pin_num = utils.split_pin(pin_str)
     except Exception:
@@ -54,7 +74,7 @@ def _find_selection_by_pin(app, pin_str: str):
     return None
 
 def _safe_is_pin_used(app, pin_str: str) -> bool:
-    """Usa app.is_pin_used se existir; senão consulta app.selections."""
+    """Uses app.is_pin_used if it exists; otherwise checks app.selections."""
     if hasattr(app, "is_pin_used") and callable(app.is_pin_used):
         try:
             return bool(app.is_pin_used(pin_str))
@@ -63,7 +83,7 @@ def _safe_is_pin_used(app, pin_str: str) -> bool:
     return _find_selection_by_pin(app, pin_str) is not None
 
 def _same_i2c_bus(existing_rec, new_type: str, new_instance: str) -> bool:
-    """True se ambos são I2C e a instância é a mesma (ex.: I2C1)."""
+    """Returns True if both are I2C and the instance is the same (e.g., I2C1)."""
     if not existing_rec:
         return False
     return (
@@ -73,9 +93,10 @@ def _same_i2c_bus(existing_rec, new_type: str, new_instance: str) -> bool:
     )
 
 def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
-    """
-    Adiciona um pino individual à lista principal (app.selections).
-    Retorna True se adicionou, False se já existia ou não havia escolha de pino.
+    """Adds an individual pin to the main list (app.selections).
+    
+    Returns:
+        True if added, False if already exists or no pin choice was available.
     """
     p_pin = pin_config.get("pin_choice")
     if not p_pin:
@@ -83,15 +104,15 @@ def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
 
     port, pin_num = utils.split_pin(p_pin)
 
-    # não duplica na tabela principal (normaliza como string)
+    # Don't duplicate in main table (normalize as string)
     if any(r.get('port') == port and str(r.get('pin')) == str(pin_num) for r in app.selections):
         return False
 
-    # metadados do parent
+    # Parent metadata
     p_type = (parent_mapping.get("type") or "GPIO").strip()
     p_instance = (parent_mapping.get("instance") or "").strip()
 
-    # label/role
+    # Label/role
     p_role = (pin_config.get("role") or "").strip()
     label_prefix = (parent_mapping.get("label_prefix") or parent_mapping.get("type") or "PIN").strip()
     explicit_label = (pin_config.get("label") or parent_mapping.get("label") or "").strip()
@@ -103,7 +124,7 @@ def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
     else:
         p_label = f"{label_prefix}_{p_pin}".replace(" ", "_")
 
-    # derive config
+    # Derive configuration
     mode = pin_config.get("mode", "INPUT")
     pull = pin_config.get("pull", "NOPULL")
     speed, afn = "LOW", 0
@@ -119,15 +140,15 @@ def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
         afn = utils.af_str_to_num(afs.get(p_pin, "")) if hasattr(utils, "af_str_to_num") else 0
 
     elif p_type.upper() == "TIM":
-        # PWM/TIM normalmente AF_PP
+        # PWM/TIM normally AF_PP
         mode, pull, speed = "AF_PP", "NOPULL", "HIGH"
 
     elif p_type.upper() == "GPIO":
-        # GPIO simples: respeita overrides do parent (se fornecidos)
+        # Simple GPIO: respects parent overrides (if provided)
         mode = parent_mapping.get("mode", mode)
         pull = parent_mapping.get("pull", pull)
 
-    # adiciona na lista principal
+    # Add to main list
     app.selections.append({
         "type": p_type,
         "instance": p_instance,
@@ -141,40 +162,39 @@ def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
     })
     return True
 
-# ============================ fluxo principal ============================
+# ============================ Main flow ============================
 
 def apply_use_case(app):
+    """Applies the use case (one case at a time mode):
+      - Clears pinout/tabs before applying
+      - Adds pins from input+output presets
+      - Allows pin sharing on the SAME I2C (same instance)
+      - Populates I2C/UART tabs
+      - Saves summary in app.use_case_config and accumulates in app.use_cases (for presets_generator)
     """
-    Aplica o caso de uso (modo 'um caso por vez'):
-      - Limpa pinout/abas antes de aplicar.
-      - Adiciona pinos do input+output presets.
-      - Permite share de pinos no MESMO I2C (mesma instância).
-      - Popula abas I2C/UART.
-      - Salva resumo em app.use_case_config e acumula em app.use_cases (para presets_generator).
-    """
-    # valida presets e chaves
+    # Validate presets and keys
     maps = data.PRESETS.get("mappings", {})
     if not maps:
-        messagebox.showerror("Presets", "Nenhum preset carregado. Verifique presets.json e data.load_presets().")
+        messagebox.showerror("Presets", "No presets loaded. Check presets.json and data.load_presets().")
         return
 
     input_key  = app.cmb_preset_input.get()  if hasattr(app, "cmb_preset_input")  else ""
     output_key = app.cmb_preset_output.get() if hasattr(app, "cmb_preset_output") else ""
 
     if input_key not in maps:
-        messagebox.showerror("Preset inválido", f"A entrada '{input_key}' não existe em presets.json.")
+        messagebox.showerror("Invalid Preset", f"Input '{input_key}' does not exist in presets.json.")
         return
     if output_key not in maps:
-        messagebox.showerror("Preset inválido", f"A saída '{output_key}' não existe em presets.json.")
+        messagebox.showerror("Invalid Preset", f"Output '{output_key}' does not exist in presets.json.")
         return
 
     input_map  = maps.get(input_key, {})
     output_map = maps.get(output_key, {})
 
-    # modo 1 caso por vez
+    # One case at a time mode
     _reset_ui_for_new_case(app)
 
-    # pinos a processar
+    # Pins to process
     pins_to_process = []
     if input_map:
         for p in input_map.get("pins", [input_map]):
@@ -183,13 +203,13 @@ def apply_use_case(app):
         for p in output_map.get("pins", [output_map]):
             pins_to_process.append((p, output_map, output_key or "output"))
 
-    # adicionar pinos (não há conflitos após reset)
+    # Add pins (no conflicts after reset)
     added = []
     for pin_cfg, parent_map, _owner in pins_to_process:
         if _add_pin_from_config(app, pin_cfg, parent_map):
             added.append(pin_cfg.get("pin_choice"))
 
-    # merge de settings por instância
+    # Merge settings by instance
     settings_to_apply = {}
     for p_map in (input_map, output_map):
         if not p_map or "settings" not in p_map:
@@ -209,7 +229,7 @@ def apply_use_case(app):
             else:
                 settings_to_apply[inst][k] = v
 
-    # popula abas
+    # Populate tabs
     updated_ifaces = []
     for inst, st in settings_to_apply.items():
         # I2C
@@ -242,7 +262,7 @@ def apply_use_case(app):
     if hasattr(app, "update_peripheral_tabs_state"):
         app.update_peripheral_tabs_state()
 
-    # salvar resumo do caso em memória (para presets_generator)
+    # Save case summary in memory (for presets_generator)
     processing_enabled = bool(getattr(app, "var_convert", None) and app.var_convert.get())
     formula_text = (app.ent_formula.get().strip() if getattr(app, "ent_formula", None) else "")
 
@@ -281,28 +301,28 @@ def apply_use_case(app):
         }
     }
 
-    # mantém uma lista de casos aplicados (histórico)
+    # Maintain a list of applied cases (history)
     if not hasattr(app, "use_cases"):
         app.use_cases = []
     app.use_cases.append(app.use_case_config)
 
-    # tenta persistir preset_settings.json automaticamente, se disponível
+    # Try to automatically persist preset_settings.json if available
     try:
         from handlers import file_handler as _fh
         if hasattr(_fh, "save_selected_use_case"):
             _fh.save_selected_use_case(app)
     except Exception:
-        # ok não persistir se algo faltar
+        # OK to not persist if something is missing
         pass
 
-    # resumo
-    parts = [f"{len([p for p in added if p])} pino(s) adicionados."]
+    # Summary
+    parts = [f"{len([p for p in added if p])} pin(s) added."]
     if added:
-        parts.append("Adicionados: " + ", ".join(sorted({a for a in added if a})))
+        parts.append("Added: " + ", ".join(sorted({a for a in added if a})))
     if updated_ifaces:
-        parts.append("Periféricos atualizados: " + ", ".join(sorted(set(updated_ifaces))))
+        parts.append("Peripherals updated: " + ", ".join(sorted(set(updated_ifaces))))
     else:
-        parts.append("Nenhum periférico foi atualizado (confira as abas).")
-    parts.append("Modo: 1 caso por vez (pinout anterior foi limpo).")
+        parts.append("No peripherals were updated (check the tabs).")
+    parts.append("Mode: One case at a time (previous pinout was cleared).")
 
-    messagebox.showinfo("Preset Aplicado", "\n".join(parts))
+    messagebox.showinfo("Preset Applied", "\n".join(parts))

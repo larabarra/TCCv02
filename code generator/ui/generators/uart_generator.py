@@ -96,8 +96,16 @@ def _map_uart_interface_name(instance: str) -> str:
     return s  
 
 def generate_uart_config(a, b=None) -> list[str]:
- 
-    # Detecta modo novo/antigo
+    """Generate UART configuration files.
+    
+    Args:
+        a: UART settings dictionary.
+        b: Legacy parameter (unused).
+        
+    Returns:
+        List of generated file paths.
+    """
+    # Detect new/old mode
     if isinstance(a, dict):
         uart_settings = a
 

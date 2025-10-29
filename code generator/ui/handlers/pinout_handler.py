@@ -41,9 +41,9 @@ def on_pin_change(app, event=None):
 def add_row(app):
     pin_label = app.cmb_pin.get().strip()
     if not pin_label: messagebox.showwarning("Incomplete", "Please select a pin."); return
-    if app.is_pin_used(pin_label): messagebox.showwarning("Conflito de Pino", f"O pino {pin_label} já está em uso."); return
+    if app.is_pin_used(pin_label): messagebox.showwarning("Pin Conflict", f"Pin {pin_label} is already in use."); return
     t = app.cmb_type.get()
-    if t != "GPIO" and (not app.cmb_inst.get() or not app.cmb_role.get()): messagebox.showwarning("Incompleto", "Por favor, selecione instância e função."); return
+    if t != "GPIO" and (not app.cmb_inst.get() or not app.cmb_role.get()): messagebox.showwarning("Incomplete", "Please select instance and function."); return
     port, pin_num = utils.split_pin(pin_label)
     try: afn = int(app.ent_af.get() or "0")
     except ValueError: afn = 0

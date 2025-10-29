@@ -39,7 +39,15 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
     return output_path
 
 def _as_hal_const(value: str | None, default: str) -> str:
-    """Retorna uma string HAL válida, com fallback caso value esteja vazio."""
+    """Returns a valid HAL string, with fallback if value is empty.
+    
+    Args:
+        value: String value to process.
+        default: Default value to use if empty.
+        
+    Returns:
+        Valid HAL constant string.
+    """
     v = (value or "").strip()
     return v if v else default
 
@@ -54,11 +62,20 @@ def _addr7_to_hal(addr_any) -> int:
     return (a7 << 1) & 0xFF
 
 def generate_i2c_config(a, b=None) -> list[str]:
-    # NOVA assinatura: (i2c_settings: dict, gpio_list=None)
+    """Generate I2C configuration files.
+    
+    Args:
+        a: I2C settings dictionary or pinout list (legacy).
+        b: Settings dictionary (legacy compatibility).
+        
+    Returns:
+        List of generated file paths.
+    """
+    # NEW signature: (i2c_settings: dict, gpio_list=None)
     if isinstance(a, dict):
         i2c_settings = a
     else:
-        # compat com assinatura antiga: (pinout_list, settings)
+        # COMPAT: old signature: (pinout_list, settings)
         i2c_settings = b or {}
 
     if not i2c_settings:
@@ -66,7 +83,7 @@ def generate_i2c_config(a, b=None) -> list[str]:
 
     i2c_interfaces = []
     for instance, inst_set in i2c_settings.items():
-        # clock -> timing fixo (HSI16)
+        # clock -> fixed timing values for HSI16 (16MHz internal clock)
         speed_hz  = _to_int(inst_set.get("clockSpeed", 100000), 100000)
         if speed_hz >= 1_000_000:
             timing = "0x00300F33"   # ~1MHz @ HSI16
@@ -75,7 +92,7 @@ def generate_i2c_config(a, b=None) -> list[str]:
         else:
             timing = "0x10707DBC"   # ~100kHz @ HSI16
 
-        # campos vindos do settings (mapeados para HAL lá no export)
+        # Fields from settings (mapped to HAL in export)
         addr_mode         = _as_hal_const(inst_set.get("addressingMode"), "I2C_ADDRESSINGMODE_7BIT")
         xfer_mode         = (inst_set.get("transferMode") or "POLLING").upper()
 
@@ -86,7 +103,7 @@ def generate_i2c_config(a, b=None) -> list[str]:
         general_call_mode = _as_hal_const(inst_set.get("generalCallMode"),  "I2C_GENERALCALL_DISABLE")
         no_stretch_mode   = _as_hal_const(inst_set.get("noStretchMode"),    "I2C_NOSTRETCH_DISABLE")
 
-        # devices -> 7-bit << 1
+        # Convert device addresses: 7-bit -> 8-bit (left shift)
         processed_devices = []
         for dev in inst_set.get("devices", []):
             processed_devices.append({
@@ -101,7 +118,7 @@ def generate_i2c_config(a, b=None) -> list[str]:
             "addressing_mode": addr_mode,
             "transferMode": xfer_mode,
 
-            # >>> estes campos agora SEMPRE existem no contexto <<<
+            # These fields are ALWAYS present in the context
             "own_address1":       own_address1,
             "dual_address_mode":  dual_address_mode,
             "own_address2":       own_address2,

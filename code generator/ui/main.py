@@ -52,8 +52,8 @@ class App(tk.Tk):
         self.update_peripheral_tabs_state()
         pinout_handler.on_type_change(self)
 
-        self.use_cases = []        # lista de casos de uso selecionados
-        self.last_use_case = None  # opcional: referência ao último aplicado
+        self.use_cases = []        # list of selected use cases
+        self.last_use_case = None  # optional: reference to the last applied one
 
     def _build_ui(self):
         # --- Top frame ---
@@ -62,6 +62,7 @@ class App(tk.Tk):
         self.ent_project = ttk.Entry(top, width=24); self.ent_project.insert(0, "MyProject"); self.ent_project.pack(side="left", padx=(4,12))
         ttk.Label(top, text="MCU:").pack(side="left")
         self.cmb_mcu = ttk.Combobox(top, values=list(data.MCU_MAP.keys()), state="readonly", width=16); self.cmb_mcu.set(self.current_mcu); self.cmb_mcu.pack(side="left", padx=(4,12)); self.cmb_mcu.bind("<<ComboboxSelected>>", self.on_mcu_change)
+        ttk.Button(top, text="Build & Flash", command=lambda: file_handler.build_and_flash(self)).pack(side="right", padx=4)
         ttk.Button(top, text="Generate Code", command=lambda: file_handler.generate_files(self)).pack(side="right", padx=4)
         ttk.Button(top, text="Export Configs", command=lambda: file_handler.export_config(self)).pack(side="right", padx=4)
         
@@ -78,8 +79,8 @@ class App(tk.Tk):
         tab_i2c_frame = ttk.Frame(notebook, padding=6)
         tab_uart_frame = ttk.Frame(notebook, padding=6)
 
-        notebook.add(tab_presets_frame, text="Construtor de Casos de Uso")
-        notebook.add(tab_gpio_frame, text="Pinout Detalhado")
+        notebook.add(tab_presets_frame, text="Use Case Builder")
+        notebook.add(tab_gpio_frame, text="Detailed Pinout")
         notebook.add(tab_i2c_frame, text="I2C")
         notebook.add(tab_uart_frame, text="UART/USART")
         
@@ -144,18 +145,18 @@ class App(tk.Tk):
         name_entry = widgets.get('dev_name_entry'); addr_entry = widgets.get('dev_addr_entry'); tree = widgets.get('devices_tree')
         if not all([name_entry, addr_entry, tree]): return
         dev_name = name_entry.get().strip().upper().replace(" ", "_"); dev_addr = addr_entry.get().strip()
-        if not dev_name or not dev_addr: messagebox.showwarning("Campos Vazios", "Por favor, preencha o Nome e o Endereço."); return
+        if not dev_name or not dev_addr: messagebox.showwarning("Empty Fields", "Please fill in the Name and Address fields."); return
         try:
             addr_int = int(dev_addr, 0)
             if not (0 <= addr_int <= 0x7F): raise ValueError("Address out of 7-bit range.")
-        except ValueError: messagebox.showerror("Endereço Inválido", "Por favor, insira um endereço 7-bit válido (ex: 68 ou 0x44)."); return
+        except ValueError: messagebox.showerror("Invalid Address", "Please enter a valid 7-bit address (e.g., 68 or 0x44)."); return
         tree.insert("", "end", values=(dev_name, dev_addr))
         name_entry.delete(0, "end"); addr_entry.delete(0, "end")
 
     def remove_i2c_device(self, instance_name):
         widgets = self.i2c_widgets.get(instance_name, {}); tree = widgets.get('devices_tree')
         selected_item = tree.selection()
-        if not selected_item: messagebox.showwarning("Nenhum Item", "Selecione um dispositivo para remover."); return
+        if not selected_item: messagebox.showwarning("No Item", "Please select a device to remove."); return
         tree.delete(selected_item)
 
 if __name__ == "__main__":

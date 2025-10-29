@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 from pathlib import Path
+from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 # --- Path Definitions ---
@@ -77,27 +78,34 @@ def _render_and_save(template_name: str, context: dict, output_path: Path) -> Pa
 
 def generate_gpio_config(pinout_data_or_blocks) -> list[str]:
     """
-    Gera gpio.c/.h a partir do novo formato 'pinout_config.json' (campo 'gpio')
-    ou, por compatibilidade, de uma lista antiga de blocos com 'pins'.
+    Generates gpio.c/.h files from the new 'pinout_config.json' format (field 'gpio')
+    or, for backward compatibility, from an old list of blocks with 'pins'.
+    
+    Args:
+        pinout_data_or_blocks: Either a dict with 'gpio' field or a list of peripheral blocks.
+        
+    Returns:
+        List of generated file paths.
     """
-    # --- 1) Coleta de pinos (suporta novo e antigo formato) ---
+    # Collect pins (supports both new and old format)
     all_pins = []
 
-    # NOVO formato: dict com 'gpio': [...]
+    # NEW format: dict with 'gpio': [...]
     if isinstance(pinout_data_or_blocks, dict) and "gpio" in pinout_data_or_blocks:
         all_pins = list(pinout_data_or_blocks.get("gpio", []))
 
-    # COMPAT: antigo formato: lista de blocos {"pins":[...]}
+    # COMPAT: old format: list of blocks {"pins":[...]}
     elif isinstance(pinout_data_or_blocks, list):
         for peripheral_dict in pinout_data_or_blocks:
             all_pins.extend(peripheral_dict.get("pins", []))
 
     else:
-        # último fallback: nada
+        # Last fallback: empty
         all_pins = []
 
-    # --- 2) Contexto para o template (sem mudanças) ---
+    # Build context for template
     context = {
+        "now": datetime.now,
         "pins": all_pins,
         "map_mode": {
             "INPUT":     "GPIO_MODE_INPUT",

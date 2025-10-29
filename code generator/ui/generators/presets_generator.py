@@ -1,6 +1,7 @@
 # generators/presets_generator.py
 from __future__ import annotations
 from pathlib import Path
+from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import re
 
@@ -23,7 +24,7 @@ env = Environment(
 
 def _digits(name: str) -> str:
     """Extract digits from a string."""
-    m = re.search(r"(\d+)", name or "")
+    m = re.search(r"(\d+)$", name or "")  # Match digits at the end
     return m.group(1) if m else ""
 
 def _handle_from_instance(kind: str, instance: str) -> str:
@@ -43,7 +44,7 @@ def _render(name: str, ctx: dict, outpath: Path):
     try:
         tpl = env.get_template(name)
     except TemplateNotFound as e:
-        raise FileNotFoundError(f"Template {name} não encontrado em {TPL_DIR_SRC} ou {TPL_DIR_INC}") from e
+        raise FileNotFoundError(f"Template {name} not found in {TPL_DIR_SRC} or {TPL_DIR_INC}") from e
     outpath.parent.mkdir(parents=True, exist_ok=True)
     outpath.write_text(tpl.render(**ctx), encoding="utf-8")
     return str(outpath)
@@ -57,6 +58,12 @@ def _get_device_list(devices: list[dict] | None, name_contains: str) -> list[dic
         nm = (str(d.get("name") or "")).upper()
         if name_contains.upper() in nm:
             addr_int = d.get("address")
+            # Convert string address to integer if needed
+            if isinstance(addr_int, str):
+                if addr_int.startswith("0x"):
+                    addr_int = int(addr_int, 16)
+                else:
+                    addr_int = int(addr_int)
             # Get handle from I2C instance
             handle = ""  # Will be populated by caller
             num = _digits(nm)
@@ -77,6 +84,12 @@ def _get_lcd_addr_hal(devices: list[dict] | None) -> str | None:
         if "LCD" in nm or "PCF8574" in nm:
             addr7 = d.get("address")
             if addr7 is not None:
+                # Convert string address to integer if needed
+                if isinstance(addr7, str):
+                    if addr7.startswith("0x"):
+                        addr7 = int(addr7, 16)
+                    else:
+                        addr7 = int(addr7)
                 addr8 = int(addr7) << 1
                 return f"0x{addr8:02X}"
     return None
@@ -179,21 +192,24 @@ def generate_presets_files(
         # Check input peripheral for devices
         if input_periph.get("type") == "I2C":
             inst = input_periph.get("instance", "")
-            if i2c_dict.get(inst):
-                devices = i2c_dict[inst].get("devices", [])
-                gy521_list = _get_device_list(devices, "GY521")
-                gy521_list = _get_device_list(devices, "MPU6050")
-                for dev in gy521_list:
-                    dev["handle"] = i2c_handle
-                gy521_devices.extend(gy521_list)
+            # Get devices from the case's peripheral settings, not the main peripheral_settings
+            case_devices = input_periph.get("settings", {}).get("devices", [])
+            gy521_list = _get_device_list(case_devices, "GY521")
+            gy521_list.extend(_get_device_list(case_devices, "MPU6050"))
+            for dev in gy521_list:
+                dev["handle"] = i2c_handle
+            # Only add devices that aren't already in the list
+            for dev in gy521_list:
+                if not any(existing.get("name") == dev.get("name") for existing in gy521_devices):
+                    gy521_devices.append(dev)
                 
         # Check output peripheral for LCD
         if output_periph.get("type") == "I2C":
             inst = output_periph.get("instance", "")
-            if i2c_dict.get(inst):
-                devices = i2c_dict[inst].get("devices", [])
-                if not lcd_addr_hal:
-                    lcd_addr_hal = _get_lcd_addr_hal(devices)
+            # Get devices from the case's peripheral settings
+            case_devices = output_periph.get("settings", {}).get("devices", [])
+            if not lcd_addr_hal:
+                lcd_addr_hal = _get_lcd_addr_hal(case_devices)
     
     # If no cases, fall back to old structure
     if not cases:
@@ -237,6 +253,7 @@ def generate_presets_files(
 
     # --- Build context for input templates ---
     ctx_in = {
+        "now": datetime.now,
         "i2c_handle": i2c_handle,
         "uart_handle": uart_handle,
         "tim_handle": tim_handle,
@@ -250,7 +267,7 @@ def generate_presets_files(
         },
         # For .c template
         "include_gy521": has_gy521,
-        "gy521_list": gy521_devices,
+        "gy521_devices": gy521_devices,
         "include_din": has_din,
         "din_pin": din_pin,
         "include_dht11": has_dht11,
@@ -261,6 +278,7 @@ def generate_presets_files(
     
     # --- Build context for output templates ---
     ctx_out = {
+        "now": datetime.now,
         "i2c_handle": i2c_handle,
         "uart_handle": uart_handle,
         "tim_handle": tim_handle,
