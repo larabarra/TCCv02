@@ -3,6 +3,7 @@
 from collections import defaultdict
 import re
 from pathlib import Path
+from datetime import datetime
 
 # Import the modular generator scripts from the same package.
 from . import gpio_generator
@@ -103,6 +104,13 @@ def generate_project_files(pinout_config: dict, peripheral_settings: dict, prese
         _update_cmake_lists(all_generated_files)
     except Exception as e:
         print(f"[CMAKE UPDATE] generation error: {e}")
+
+    # 8) Generate README with pin configuration
+    try:
+        print("--- Processing: README Generation ---")
+        _generate_readme(pinout_config, peripheral_settings, preset_settings)
+    except Exception as e:
+        print(f"[README] generation error: {e}")
 
     print("\nProject file generation complete!")
     return all_generated_files
@@ -212,3 +220,153 @@ def _update_cmake_lists(generated_files: list[str]):
         f.write(updated_content)
     
     print(f"Added {len(generated_c_files)} generated files to CMakeLists.txt")
+
+
+def _generate_readme(pinout_config: dict, peripheral_settings: dict, preset_settings: dict | None = None):
+    """Generate README.md with pin configuration summary."""
+    # Use current working directory as project root (when run from code generator directory)
+    project_root = Path.cwd().parent
+    readme_file = project_root / "README.md"
+    
+    # Extract GPIO configuration
+    gpio_config = (pinout_config or {}).get("gpio", []) or []
+    
+    # Extract peripheral information
+    peripherals = []
+    if peripheral_settings:
+        for periph_type, instances in peripheral_settings.items():
+            for instance, settings in instances.items():
+                peripherals.append({
+                    "type": periph_type,
+                    "instance": instance,
+                    "settings": settings
+                })
+    
+    # Extract preset information
+    presets = []
+    if preset_settings:
+        presets = preset_settings.get("presets", []) or []
+    
+    # Generate README content
+    readme_content = f"""# STM32 Project Configuration
+
+## Pin Configuration Summary
+
+### GPIO Pins
+"""
+    
+    if gpio_config:
+        readme_content += "| Pin | Function | Port | Mode | Pull | Speed | Alternate |\n"
+        readme_content += "|-----|----------|------|------|------|-------|----------|\n"
+        
+        for pin in gpio_config:
+            pin_name = pin.get("name", "Unknown")
+            pin_num = pin.get("pin", "?")
+            port = pin.get("port", "?")
+            mode = pin.get("mode", "?")
+            pull = pin.get("pull", "-")
+            speed = pin.get("speed", "-")
+            alternate = pin.get("alternate", "-")
+            
+            readme_content += f"| {pin_name} | {pin_num} | {port} | {mode} | {pull} | {speed} | {alternate} |\n"
+    else:
+        readme_content += "No GPIO pins configured.\n"
+    
+    readme_content += "\n### Peripheral Configuration\n"
+    
+    if peripherals:
+        for periph in peripherals:
+            periph_type = periph.get("type", "Unknown")
+            periph_instance = periph.get("instance", "Unknown")
+            periph_settings = periph.get("settings", {})
+            
+            readme_content += f"\n#### {periph_type} ({periph_instance})\n"
+            
+            if periph_type == "I2C":
+                devices = periph_settings.get("devices", [])
+                if devices:
+                    readme_content += "**Connected Devices:**\n"
+                    for device in devices:
+                        device_name = device.get("name", "Unknown")
+                        device_addr = device.get("address", "Unknown")
+                        readme_content += f"- {device_name} (Address: 0x{device_addr:02X})\n"
+                else:
+                    readme_content += "No devices configured.\n"
+            
+            elif periph_type == "UART":
+                baudrate = periph_settings.get("baudrate", "Unknown")
+                readme_content += f"**Baudrate:** {baudrate}\n"
+            
+            elif periph_type == "ADC":
+                channels = periph_settings.get("channels", [])
+                if channels:
+                    readme_content += "**ADC Channels:**\n"
+                    for channel in channels:
+                        channel_name = channel.get("name", "Unknown")
+                        channel_num = channel.get("channel", "Unknown")
+                        readme_content += f"- {channel_name} (Channel {channel_num})\n"
+                else:
+                    readme_content += "No ADC channels configured.\n"
+            
+            elif periph_type == "PWM":
+                timers = periph_settings.get("timers", [])
+                if timers:
+                    readme_content += "**PWM Timers:**\n"
+                    for timer in timers:
+                        timer_name = timer.get("name", "Unknown")
+                        timer_freq = timer.get("frequency", "Unknown")
+                        readme_content += f"- {timer_name} (Frequency: {timer_freq}Hz)\n"
+                else:
+                    readme_content += "No PWM timers configured.\n"
+    else:
+        readme_content += "No peripherals configured.\n"
+    
+    readme_content += "\n### Preset Use Cases\n"
+    
+    if presets:
+        for i, preset in enumerate(presets, 1):
+            input_key = preset.get("input_key", "Unknown")
+            output_key = preset.get("output_key", "Unknown")
+            threshold = preset.get("threshold", "N/A")
+            formula = preset.get("formula", "N/A")
+            convert_enabled = preset.get("convert_enabled", False)
+            
+            readme_content += f"\n#### Use Case {i}: {input_key} → {output_key}\n"
+            readme_content += f"- **Input:** {input_key}\n"
+            readme_content += f"- **Output:** {output_key}\n"
+            readme_content += f"- **Threshold:** {threshold}\n"
+            readme_content += f"- **Formula:** {formula}\n"
+            readme_content += f"- **Value Conversion:** {'Enabled' if convert_enabled else 'Disabled'}\n"
+    else:
+        readme_content += "No preset use cases configured.\n"
+    
+    readme_content += f"""
+## Build Instructions
+
+1. **Hardware Setup:** Connect your STM32 board according to the pin configuration above
+2. **Build:** Use the "Build & Flash" button in the configuration tool
+3. **Manual Build:** 
+   ```bash
+   cmake -B build
+   cmake --build build
+   cmake --build build --target flash
+   ```
+
+## Generated Files
+
+- `Core/Src/main.c` - Main application code
+- `Core/Src/gpio.c` - GPIO configuration
+- `Core/Src/i2c.c` - I2C peripheral configuration
+- `Core/Src/presets_in.c` - Input sensor functions
+- `Core/Src/presets_out.c` - Output functions
+- `Core/Inc/` - Header files
+
+---
+*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} by STM32 Code Generator*
+"""
+    
+    # Write README file
+    with open(readme_file, 'w', encoding='utf-8') as f:
+        f.write(readme_content)
+    
+    print(f"Generated README.md with pin configuration summary")
