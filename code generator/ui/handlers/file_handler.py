@@ -77,18 +77,12 @@ def export_config(app):
 def build_and_flash(app):
     """Builds the project using CMake and flashes it to the board."""
     try:
-        # Change to project root directory (one level up from code generator)
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        original_cwd = os.getcwd()
-        os.chdir(project_root)
-        
         # Check if code has been generated first
         if not os.path.exists("Core/Src/main.c"):
             messagebox.showwarning("Code Not Generated", "Please generate code first before building and flashing.")
-            os.chdir(original_cwd)
             return
         
-        messagebox.showinfo("Build & Flash", f"Starting build and flash process...\nWorking directory: {os.getcwd()}")
+        messagebox.showinfo("Build & Flash", "Starting build and flash process...")
         
         # Find STM32CubeIDE toolchain
         toolchain_path = None
@@ -114,48 +108,40 @@ def build_and_flash(app):
         
         # First, configure CMake with ARM toolchain
         build_dir = "build"
-        
-        # Always clean build directory to ensure correct generator is used
-        if os.path.exists(build_dir):
-            import shutil
-            shutil.rmtree(build_dir)
-            print(f"Cleaned existing build directory: {build_dir}")
-        
-        messagebox.showinfo("Configuring", "Configuring CMake with ARM toolchain...")
-        
-        # Try to find the toolchain file
-        toolchain_file = None
-        toolchain_candidates = [
-            "cmake/gcc-arm-none-eabi.cmake",
-            "cmake/stm32cubemx/STM32G474xx.cmake",
-            "cmake/stm32cubemx/STM32G4xx.cmake",
-            "cmake/stm32cubemx/toolchain.cmake"
-        ]
-        
-        for candidate in toolchain_candidates:
-            if os.path.exists(candidate):
-                toolchain_file = candidate
-                break
-        
-        config_cmd = ["cmake", "-B", build_dir, "-G", "MinGW Makefiles"]
-        if toolchain_file:
-            config_cmd.extend(["--toolchain", toolchain_file])
-        
-        print(f"Running CMake command: {' '.join(config_cmd)}")
-        
-        config_result = subprocess.run(
-            config_cmd,
-            capture_output=True,
-            text=True,
-            timeout=60,
-            env=env
-        )
-        
-        if config_result.returncode != 0:
-            messagebox.showerror("CMake Config Error", 
-                f"CMake configuration failed:\n{config_result.stderr}\n\n"
-                f"Tried toolchain file: {toolchain_file or 'None found'}")
-            return
+        if not os.path.exists(build_dir) or not os.path.exists(os.path.join(build_dir, "CMakeCache.txt")):
+            messagebox.showinfo("Configuring", "Configuring CMake with ARM toolchain...")
+            
+            # Try to find the toolchain file
+            toolchain_file = None
+            toolchain_candidates = [
+                "cmake/gcc-arm-none-eabi.cmake",
+                "cmake/stm32cubemx/STM32G474xx.cmake",
+                "cmake/stm32cubemx/STM32G4xx.cmake",
+                "cmake/stm32cubemx/toolchain.cmake"
+            ]
+            
+            for candidate in toolchain_candidates:
+                if os.path.exists(candidate):
+                    toolchain_file = candidate
+                    break
+            
+            config_cmd = ["cmake", "-B", build_dir]
+            if toolchain_file:
+                config_cmd.extend(["-DCMAKE_TOOLCHAIN_FILE=" + toolchain_file])
+            
+            config_result = subprocess.run(
+                config_cmd,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                env=env
+            )
+            
+            if config_result.returncode != 0:
+                messagebox.showerror("CMake Config Error", 
+                    f"CMake configuration failed:\n{config_result.stderr}\n\n"
+                    f"Tried toolchain file: {toolchain_file or 'None found'}")
+                return
         
         # Build the project
         messagebox.showinfo("Building", "Building project...")
@@ -196,12 +182,6 @@ def build_and_flash(app):
             "Please install CMake and ensure it's available in your system PATH.")
     except Exception as e:
         messagebox.showerror("Error", f"Unexpected error:\n{str(e)}")
-    finally:
-        # Always restore original working directory
-        try:
-            os.chdir(original_cwd)
-        except:
-            pass
 
 
 def generate_files(app):
