@@ -28,17 +28,64 @@ def toggle_formula_field(app, event=None):
                 app.var_convert.set(False)  # Reset checkbox
 
 def toggle_threshold_field(app, event=None):
-    """Shows/hides the threshold field based on the selected output.
-    Threshold is only available for Digital Output (LED) / GPIO outputs.
+    """Shows/hides the threshold field based on the selected input AND output.
+    Threshold is only available when:
+    - Output is Digital Output (LED)
+    - AND Input is ADC-based (Potentiometer, KY-013)
     """
     if hasattr(app, "cmb_preset_output") and hasattr(app, "frm_threshold") and app.cmb_preset_output and app.frm_threshold:
         selected_output = app.cmb_preset_output.get()
-        # Threshold is only available for Digital Output (LED) / GPIO
-        is_visible = selected_output == "Digital Output (LED)"
+        selected_input = app.cmb_preset_input.get() if hasattr(app, "cmb_preset_input") and app.cmb_preset_input else ""
+        
+        # Threshold only for Digital Output (LED) with ADC inputs
+        adc_inputs = ["Potentiometer (ADC)", "KY-013 Analog Temp Sensor"]
+        is_digital_output = selected_output == "Digital Output (LED)"
+        is_adc_input = selected_input in adc_inputs
+        
+        is_visible = is_digital_output and is_adc_input
+        
         if is_visible:
             app.frm_threshold.pack(fill="x", pady=(10, 0))
         else:
             app.frm_threshold.pack_forget()
+
+def update_valid_outputs(app, event=None):
+    """Updates the output combobox to show only valid outputs based on selected input.
+    
+    Valid combinations:
+    - Digital Input → Digital Output (LED) only
+    - Potentiometer (ADC) → Digital Output (LED) only (with threshold)
+    - KY-013 → Digital Output (LED) only (with threshold)
+    - GY-521, DHT11 (sensors) → LCD or UART only
+    """
+    if not hasattr(app, "cmb_preset_input") or not hasattr(app, "cmb_preset_output"):
+        return
+    
+    selected_input = app.cmb_preset_input.get()
+    
+    # Define valid outputs for each input type
+    output_rules = {
+        "Digital Input": ["Digital Output (LED)"],
+        "Potentiometer (ADC)": ["Digital Output (LED)"],
+        "KY-013 Analog Temp Sensor": ["Digital Output (LED)"],
+        "GY-521 Sensor": ["LCD 20x4 (I2C)", "UART"],
+        "DHT11 Humidity & Temp Sensor": ["LCD 20x4 (I2C)", "UART"],
+    }
+    
+    valid_outputs = output_rules.get(selected_input, [])
+    
+    if valid_outputs:
+        current_selection = app.cmb_preset_output.get()
+        app.cmb_preset_output.config(values=valid_outputs)
+        
+        # Keep current selection if it's still valid, otherwise select first valid option
+        if current_selection in valid_outputs:
+            app.cmb_preset_output.set(current_selection)
+        elif valid_outputs:
+            app.cmb_preset_output.set(valid_outputs[0])
+    
+    # Update threshold field visibility after changing output options
+    toggle_threshold_field(app)
 
 # ============================ Internal helpers ============================
 
@@ -59,8 +106,9 @@ def _reset_ui_for_new_case(app):
             if tree:
                 for iid in tree.get_children():
                     tree.delete(iid)
-    # Reset config in memory
+    # Reset config in memory (clear previous use case for "one at a time" mode)
     app.use_case_config = None
+    app.use_cases = []  # Clear list - only keep the new one
 
 def _find_selection_by_pin(app, pin_str: str):
     """Returns the existing record in app.selections for this pin (or None)."""
@@ -189,6 +237,27 @@ def apply_use_case(app):
     if output_key not in maps:
         messagebox.showerror("Invalid Preset", f"Output '{output_key}' does not exist in presets.json.")
         return
+    
+    # Validate input/output combination
+    valid_combinations = {
+        "Digital Input": ["Digital Output (LED)"],
+        "Potentiometer (ADC)": ["Digital Output (LED)"],
+        "KY-013 Analog Temp Sensor": ["Digital Output (LED)"],
+        "GY-521 Sensor": ["LCD 20x4 (I2C)", "UART"],
+        "DHT11 Humidity & Temp Sensor": ["LCD 20x4 (I2C)", "UART"],
+    }
+    
+    if input_key in valid_combinations:
+        valid_outputs = valid_combinations[input_key]
+        if output_key not in valid_outputs:
+            messagebox.showerror(
+                "Invalid Combination",
+                f"❌ Invalid combination!\n\n"
+                f"Input: {input_key}\n"
+                f"Output: {output_key}\n\n"
+                f"Valid outputs for '{input_key}':\n• " + "\n• ".join(valid_outputs)
+            )
+            return
 
     input_map  = maps.get(input_key, {})
     output_map = maps.get(output_key, {})
@@ -270,8 +339,14 @@ def apply_use_case(app):
 
     threshold_enabled = False
     threshold_value = ""
-    if hasattr(app, "cmb_preset_output") and app.cmb_preset_output:
-        threshold_enabled = app.cmb_preset_output.get() in ["Digital Output (LED)", "PWM"]
+    if hasattr(app, "cmb_preset_output") and app.cmb_preset_output and hasattr(app, "cmb_preset_input") and app.cmb_preset_input:
+        output_key = app.cmb_preset_output.get()
+        input_key = app.cmb_preset_input.get()
+        # Threshold only enabled for Digital Output (LED) with ADC inputs
+        adc_inputs = ["Potentiometer (ADC)", "KY-013 Analog Temp Sensor"]
+        is_digital_output = output_key == "Digital Output (LED)"
+        is_adc_input = input_key in adc_inputs
+        threshold_enabled = is_digital_output and is_adc_input
     if threshold_enabled and getattr(app, "ent_threshold", None):
         threshold_value = app.ent_threshold.get().strip()
 

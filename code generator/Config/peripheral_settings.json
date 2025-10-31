@@ -8,12 +8,18 @@
         {
           "name": "GY521_MPU6050",
           "address": 104
-        },
-        {
-          "name": "LCD_PCF8574",
-          "address": 39
         }
       ]
+    }
+  },
+  "UART": {
+    "UART2": {
+      "baudRate": 115200,
+      "wordLength": "UART_WORDLENGTH_8B",
+      "stopBits": "UART_STOPBITS_1",
+      "parity": "UART_PARITY_NONE",
+      "flowControl": "UART_HWCONTROL_NONE",
+      "transferMode": "POLLING"
     }
   }
 }

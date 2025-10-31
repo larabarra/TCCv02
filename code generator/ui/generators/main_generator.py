@@ -92,29 +92,7 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_s
         elif block_type in ["UART", "USART"]:
             context["uart_interfaces"].append(block)
     
-    # Detect I2C/UART from peripheral_settings if not already added (new format)
-    if peripheral_settings:
-        if peripheral_settings.get("I2C") and not context["i2c_interfaces"]:
-            # Add I2C interfaces from peripheral_settings
-            for instance, settings in peripheral_settings.get("I2C", {}).items():
-                context["i2c_interfaces"].append({
-                    "type": "I2C",
-                    "instance": instance,
-                    "num": _get_digits(instance),
-                    "settings": settings
-                })
-        
-        if peripheral_settings.get("UART") and not context["uart_interfaces"]:
-            # Add UART interfaces from peripheral_settings
-            for instance, settings in peripheral_settings.get("UART", {}).items():
-                context["uart_interfaces"].append({
-                    "type": "UART",
-                    "instance": instance,
-                    "num": _get_digits(instance),
-                    "settings": settings
-                })
-    
-    # 3. Check for preset cases FIRST
+    # 3. Check for preset cases FIRST to determine what peripherals are actually needed
     if preset_settings and preset_settings.get("cases"):
         cases = preset_settings.get("cases", [])
         if cases:
@@ -197,6 +175,41 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_s
                 case["output_uart_instance"] = out_periph.get("instance", "UART1")
             elif out_periph.get("type") == "TIM":
                 case["output_tim_instance"] = out_periph.get("instance", "TIM1")
+        
+        # After processing all cases, add peripherals that are actually used
+        if peripheral_settings:
+            # Check if any case uses I2C
+            uses_i2c = any(
+                case.get("peripheral_settings", {}).get("input_peripheral", {}).get("type") == "I2C" or
+                case.get("peripheral_settings", {}).get("output_peripheral", {}).get("type") == "I2C"
+                for case in context["preset_cases"]
+            )
+            
+            if uses_i2c and peripheral_settings.get("I2C") and not context["i2c_interfaces"]:
+                # Add I2C interfaces from peripheral_settings
+                for instance, settings in peripheral_settings.get("I2C", {}).items():
+                    context["i2c_interfaces"].append({
+                        "type": "I2C",
+                        "instance": instance,
+                        "num": _get_digits(instance),
+                        "settings": settings
+                    })
+            
+            # Check if any case uses UART
+            uses_uart = any(
+                case.get("peripheral_settings", {}).get("output_peripheral", {}).get("type") in ["UART", "USART"]
+                for case in context["preset_cases"]
+            )
+            
+            if uses_uart and peripheral_settings.get("UART") and not context["uart_interfaces"]:
+                # Add UART interfaces from peripheral_settings
+                for instance, settings in peripheral_settings.get("UART", {}).items():
+                    context["uart_interfaces"].append({
+                        "type": "UART",
+                        "instance": instance,
+                        "num": _get_digits(instance),
+                        "settings": settings
+                    })
 
     # 4. Render and save both main.c and main.h
     main_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)

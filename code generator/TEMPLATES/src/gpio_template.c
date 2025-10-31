@@ -19,8 +19,12 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+{% set enabled_ports = [] %}
 {% for gpio in (gpio_config or pins or []) %}
+  {% if gpio.port not in enabled_ports %}
   __HAL_RCC_{{ gpio.port }}_CLK_ENABLE();
+  {% set _ = enabled_ports.append(gpio.port) %}
+  {% endif %}
 {% endfor %}
 
 {% for gpio in (gpio_config or pins or []) %}

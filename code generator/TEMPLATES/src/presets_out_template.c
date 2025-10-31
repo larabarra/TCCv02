@@ -8,10 +8,17 @@
   */
 
 #include "presets_out.h"
+#include <string.h>
 
-{% if OUT.lcd or i2c_handle %}extern I2C_HandleTypeDef {{ i2c_handle if i2c_handle else 'hi2c1' }};{% endif %}
-{% if OUT.uart or uart_handle %}extern UART_HandleTypeDef {{ uart_handle if uart_handle else 'huart1' }};{% endif %}
-{% if OUT.pwm or tim_handle %}extern TIM_HandleTypeDef  {{ tim_handle if tim_handle else 'htim1' }};{% endif %}
+{% if OUT.lcd or i2c_handle %}
+extern I2C_HandleTypeDef {{ i2c_handle if i2c_handle else 'hi2c1' }};
+{% endif %}
+{% if OUT.uart or uart_handle %}
+extern UART_HandleTypeDef {{ uart_handle if uart_handle else 'huart2' }};
+{% endif %}
+{% if OUT.pwm or tim_handle %}
+extern TIM_HandleTypeDef  {{ tim_handle if tim_handle else 'htim1' }};
+{% endif %}
 
 {% if OUT.lcd %}
 #define LCD_ADDR {{ lcd_addr if lcd_addr else '0x4E' }}
@@ -65,7 +72,7 @@ void LCD_SetCursor(uint8_t row, uint8_t col)
 HAL_StatusTypeDef OUT_UART_Print(const char *s)
 {
     const uint8_t *p = (const uint8_t*)s;
-    return HAL_UART_Transmit(&{{ uart_handle if uart_handle else 'huart1' }}, (uint8_t*)p, (uint16_t)strlen(s), 100);
+    return HAL_UART_Transmit(&{{ uart_handle if uart_handle else 'huart2' }}, (uint8_t*)p, (uint16_t)strlen(s), 100);
 }
 {% endif %}
 

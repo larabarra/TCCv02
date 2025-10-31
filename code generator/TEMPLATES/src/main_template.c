@@ -169,12 +169,36 @@ void Presets_Init(void)
     {% endif %}
   {% endfor %}
   
+  {% set has_dht11 = namespace(value=false) %}
+  {% for case in preset_cases %}
+    {% if case.input_type == "dht11" %}
+      {% set has_dht11.value = true %}
+    {% endif %}
+  {% endfor %}
+  
+  {% if has_dht11.value %}
+  // Enable DWT cycle counter for microsecond delays (required for DHT11)
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  {% endif %}
+  
   {% if has_lcd.value %}
   // Initialize LCD first
   HAL_Delay(100);
   LCD_Init();
   HAL_Delay(50);
   LCD_Clear();
+  
+  {% if has_dht11.value %}
+  // Display DHT11 startup message
+  LCD_SendString("DHT11 Starting...");
+  HAL_Delay(2000);  // DHT11 needs 1-2 seconds to stabilize after power-on
+  LCD_Clear();
+  LCD_SendString("DHT11 Ready");
+  HAL_Delay(1000);
+  LCD_Clear();
+  {% endif %}
   {% endif %}
   
   {% if has_mpu6050.value %}
@@ -220,14 +244,43 @@ void Presets_Init(void)
   */
 void Presets_Process(void)
 {
-  static uint32_t last_update = 0;
-  char buffer[20];
+  {% set needs_timer = namespace(value=false) %}
+  {% set needs_buffer = namespace(value=false) %}
+  {% for case in preset_cases %}
+    {% if case.output_type in ["lcd", "uart"] %}
+      {% set needs_timer.value = true %}
+      {% set needs_buffer.value = true %}
+    {% endif %}
+  {% endfor %}
   
+  {% if needs_timer.value %}
+  static uint32_t last_update = 0;
+  {% endif %}
+  {% if needs_buffer.value %}
+  char buffer[64];  // Buffer for UART/LCD text (increased from 20 to avoid truncation)
+  {% endif %}
+  
+  {% if needs_timer.value %}
+  {% set has_dht11_case = namespace(value=false) %}
+  {% for case in preset_cases %}
+    {% if case.input_type == "dht11" %}
+      {% set has_dht11_case.value = true %}
+    {% endif %}
+  {% endfor %}
+  
+  {% if has_dht11_case.value %}
+  // DHT11 requires minimum 2 second interval between reads
+  if (HAL_GetTick() - last_update < 2000) {
+    return;
+  }
+  {% else %}
   // Update display every 200ms
   if (HAL_GetTick() - last_update < 200) {
     return;
   }
+  {% endif %}
   last_update = HAL_GetTick();
+  {% endif %}
   
   {% for case in preset_cases %}
   // ========== Preset: {{ case.get("input_key", "Unknown") }} -> {{ case.get("output_key", "Unknown") }} ==========
@@ -237,13 +290,15 @@ void Presets_Process(void)
   float accel_x = 0.0f, accel_y = 0.0f, accel_z = 0.0f;
   MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z);
   
-  // Calculate magnitude
+  {% if case.output_type not in ["lcd", "uart"] %}
+  // Calculate magnitude (only needed for threshold/PWM outputs)
   float magnitude = sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
   {% if case.get("processing", {}).get("enabled") %}
   // Apply formula: {{ case.get("processing", {}).get("formula", "") }}
   float processed_value = magnitude {{ case.get("processing", {}).get("formula", "") }};
   {% else %}
   float processed_value = magnitude;  // Use raw magnitude
+  {% endif %}
   {% endif %}
   
   {% elif case.input_type == "potentiometer" %}
@@ -260,20 +315,25 @@ void Presets_Process(void)
     {% endif %}
     
   {% elif case.input_type == "digital_in" %}
-  // Read digital input
-  uint8_t din_value = HAL_GPIO_ReadPin(DIN_GPIO_Port, DIN_Pin);
-  float processed_value = din_value ? 1.0f : 0.0f;
+  // Read digital input (direct GPIO read, no conversion needed)
+  GPIO_PinState din_state = HAL_GPIO_ReadPin(INPUT_PIN_GPIO_Port, INPUT_PIN_Pin);
   
   {% elif case.input_type == "dht11" %}
-  // Read DHT11 sensor
-  DHT11_Data_t dht_data;
-  if (DHT11_Read(&dht_data) == HAL_OK)
+  // Read DHT11 sensor (returns struct with temperature and humidity)
+  DHT11_Data_t dht_data = DHT11_Read();
+  
+  {% if case.output_type == "lcd" %}
+  // For LCD output, we'll display both temp and humidity (no processing needed)
+  {% else %}
+  // For non-LCD outputs, use temperature as processed value
+  if (dht_data.status == HAL_OK)
   {
-    float processed_value = dht_data.temperature;  // Use temperature
+    float processed_value = (float)dht_data.temp_int + (float)dht_data.temp_dec / 10.0f;
     {% if case.get("processing", {}).get("enabled") %}
     // Apply formula: {{ case.get("processing", {}).get("formula", "") }}
     processed_value = processed_value {{ case.get("processing", {}).get("formula", "") }};
     {% endif %}
+  {% endif %}
   
   {% elif case.input_type == "ky013" %}
   // Read KY-013 temperature sensor via ADC
@@ -288,16 +348,23 @@ void Presets_Process(void)
   
   {% endif %}
   
-  // Process the output based on threshold
-  {% if case.get("threshold", {}).get("enabled") %}
+  {% if case.output_type in ["digital_out", "pwm"] %}
+  // Process the output based on threshold and input type
+  {% if case.input_type == "digital_in" %}
+  // Digital Input: LED ON when button pressed (active LOW with pull-up)
+  bool should_activate = (din_state == GPIO_PIN_RESET);
+  {% elif case.get("threshold", {}).get("enabled") and case.input_type in ["potentiometer", "ky013"] %}
+  // Threshold check for ADC-based inputs (Potentiometer, KY-013)
   uint16_t threshold = {{ case.get("threshold", {}).get("value", "1000") }};
   bool should_activate = processed_value > threshold;
   {% else %}
-  bool should_activate = true;  // Always activate when threshold is disabled
+  // Always activate for sensors without threshold
+  bool should_activate = true;
+  {% endif %}
   {% endif %}
   
   // Close the input reading block for sensors that needed it
-  {% if case.input_type == "potentiometer" or case.input_type == "dht11" or case.input_type == "ky013" %}
+  {% if (case.input_type == "potentiometer" or case.input_type == "ky013") or (case.input_type == "dht11" and case.output_type != "lcd") %}
   }
   {% endif %}
   
@@ -323,6 +390,30 @@ void Presets_Process(void)
   LCD_SetCursor(2, 0);
   snprintf(buffer, sizeof(buffer), "Z:%d.%02d", az_int/100, abs(az_int%100));
   LCD_SendString(buffer);
+  
+  {% elif case.input_type == "dht11" %}
+  // Display DHT11 temperature and humidity
+  if (dht_data.status == HAL_OK)
+  {
+    // Line 1: Temperature
+    snprintf(buffer, sizeof(buffer), "Temp: %d.%d C", dht_data.temp_int, dht_data.temp_dec);
+    LCD_SendString(buffer);
+    
+    // Line 2: Humidity
+    LCD_SetCursor(1, 0);
+    snprintf(buffer, sizeof(buffer), "Hum:  %d.%d %%", dht_data.hum_int, dht_data.hum_dec);
+    LCD_SendString(buffer);
+  }
+  else
+  {
+    // Show error with diagnostic info
+    LCD_SendString("DHT11 Timeout!");
+    LCD_SetCursor(1, 0);
+    LCD_SendString("Check: VCC,GND,PA1");
+    LCD_SetCursor(2, 0);
+    LCD_SendString("Wait 2-3 seconds");
+  }
+  
   {% else %}
   // Generic display for other sensor types
   if (should_activate)
@@ -337,11 +428,40 @@ void Presets_Process(void)
   
   {% elif case.output_type == "uart" %}
   // Send via UART
+  {% if case.input_type == "gy521" %}
+  // Send MPU6050 accelerometer data via UART
+  // Convert floats to integers for transmission (ARM doesn't support %f by default)
+  int16_t ax_int = (int16_t)(accel_x * 100.0f);
+  int16_t ay_int = (int16_t)(accel_y * 100.0f);
+  int16_t az_int = (int16_t)(accel_z * 100.0f);
+  
+  snprintf(buffer, sizeof(buffer), "X:%d.%02d Y:%d.%02d Z:%d.%02d\r\n", 
+           ax_int/100, abs(ax_int%100),
+           ay_int/100, abs(ay_int%100),
+           az_int/100, abs(az_int%100));
+  OUT_UART_Print(buffer);
+  
+  {% elif case.input_type == "dht11" %}
+  // Send DHT11 data via UART
+  if (dht_data.status == HAL_OK)
+  {
+    snprintf(buffer, sizeof(buffer), "Temp:%d.%d Hum:%d.%d\r\n",
+             dht_data.temp_int, dht_data.temp_dec,
+             dht_data.hum_int, dht_data.hum_dec);
+    OUT_UART_Print(buffer);
+  }
+  else
+  {
+    OUT_UART_Print("DHT11_ERROR\r\n");
+  }
+  
+  {% else %}
+  // Generic UART output
   if (should_activate)
   {
-    uint8_t msg[] = "ACTIVE\r\n";
-    UART_Transmit(&huart1, msg, sizeof(msg) - 1, 100);
+    OUT_UART_Print("ACTIVE\r\n");
   }
+  {% endif %}
   
   {% elif case.output_type == "pwm" %}
   // Set PWM duty cycle
@@ -359,18 +479,21 @@ void Presets_Process(void)
   // Set digital output (LED)
   if (should_activate)
   {
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(OUTPUT_LED_GPIO_Port, OUTPUT_LED_Pin, GPIO_PIN_SET);
   }
   else
   {
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(OUTPUT_LED_GPIO_Port, OUTPUT_LED_Pin, GPIO_PIN_RESET);
   }
   
   {% endif %}
   
   {% endfor %}
   
-  HAL_Delay(100);  // Loop delay
+  {% if not needs_timer.value %}
+  // Small delay for GPIO-only presets to prevent excessive CPU usage
+  HAL_Delay(1);
+  {% endif %}
 }
 {% endif %}
 

@@ -4,7 +4,7 @@
       "direction": "input",
       "type": "GPIO",
       "pins": [
-        { "pin_choice": "PA0", "label": "INPUT_PIN", "mode": "INPUT", "pull": "PULLUP" }
+        { "pin_choice": "PA1", "label": "INPUT_PIN", "mode": "INPUT", "pull": "PULLUP" }
       ]
     },
     "Potentiometer (ADC)": {
@@ -34,7 +34,7 @@
       "direction": "output",
       "type": "GPIO",
       "pins": [
-        { "pin_choice": "PC13", "label": "OUTPUT_LED", "mode": "OUTPUT_PP", "pull": "NOPULL" }
+        { "pin_choice": "PA5", "label": "OUTPUT_LED", "mode": "OUTPUT_PP", "pull": "NOPULL" }
       ]
     },
     "UART": {
