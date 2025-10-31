@@ -2,7 +2,7 @@
   "cases": [
     {
       "input_key": "GY-521 Sensor",
-      "output_key": "LCD 20x4 (I2C)",
+      "output_key": "UART",
       "processing": {
         "enabled": false,
         "formula": ""
@@ -23,31 +23,20 @@
               {
                 "name": "GY521_MPU6050",
                 "address": "0x68"
-              },
-              {
-                "name": "LCD_PCF8574",
-                "address": "0x27"
               }
             ]
           }
         },
         "output_peripheral": {
-          "type": "I2C",
-          "instance": "I2C1",
+          "type": "UART",
+          "instance": "UART2",
           "settings": {
-            "clockSpeed": "100 kHz (Standard)",
-            "addressingMode": "7-bit",
-            "transferMode": "Polling",
-            "devices": [
-              {
-                "name": "GY521_MPU6050",
-                "address": "0x68"
-              },
-              {
-                "name": "LCD_PCF8574",
-                "address": "0x27"
-              }
-            ]
+            "baudRate": "115200",
+            "wordLength": "8 Bits",
+            "stopBits": "1",
+            "parity": "None",
+            "flowControl": "None",
+            "transferMode": "Polling"
           }
         }
       }

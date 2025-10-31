@@ -15,13 +15,10 @@ extern "C" {
 #endif
 
 #include "main.h"
-#include "i2c.h"
+#include "uart.h"
 
-void LCD_Init(void);
-void LCD_Clear(void);
-void LCD_SendString(const char *s);
-void LCD_SetCursor(uint8_t row, uint8_t col);
 
+HAL_StatusTypeDef OUT_UART_Print(const char *s);
 
 
 

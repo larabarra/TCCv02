@@ -19,6 +19,24 @@
       "pull": "PULLUP",
       "speed": "VERY_HIGH",
       "alternate_fn": "GPIO_AF4_I2C1"
+    },
+    {
+      "name": "DEBUG_TX",
+      "port": "GPIOA",
+      "pin": 2,
+      "mode": "AF_PP",
+      "pull": "NOPULL",
+      "speed": "VERY_HIGH",
+      "alternate_fn": "GPIO_AF7_USART2"
+    },
+    {
+      "name": "DEBUG_RX",
+      "port": "GPIOA",
+      "pin": 3,
+      "mode": "AF_PP",
+      "pull": "NOPULL",
+      "speed": "VERY_HIGH",
+      "alternate_fn": "GPIO_AF7_USART2"
     }
   ],
   "artifact_manifest": {

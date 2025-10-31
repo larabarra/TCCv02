@@ -28,6 +28,10 @@ void Error_Handler(void);
 #define GY521_SCL_GPIO_Port GPIOB
 #define GY521_SDA_Pin GPIO_PIN_9
 #define GY521_SDA_GPIO_Port GPIOB
+#define DEBUG_TX_Pin GPIO_PIN_2
+#define DEBUG_TX_GPIO_Port GPIOA
+#define DEBUG_RX_Pin GPIO_PIN_3
+#define DEBUG_RX_GPIO_Port GPIOA
 
 /* coisas que já vem configuradas no STM32CubeMX */
 #define RCC_OSC32_IN_Pin GPIO_PIN_14

@@ -157,25 +157,93 @@ GPIO_PinState DI_Read_{{ din_pin.name }}(void)
 
 {% if include_dht11 %}
 /* =========================
- *  DHT11 Data structure and Implementation
+ *  DHT11 Implementation
  * ========================= */
-/* DHT11 Data structure */
-typedef struct {
-    HAL_StatusTypeDef status;
-    uint8_t hum_int;
-    uint8_t hum_dec;
-    uint8_t temp_int;
-    uint8_t temp_dec;
-} DHT11_Data_t;
 
 {% if dht_pin %}
-DHT11_Data_t DHT11_Read_{{ dht_pin.name }}(void)
+// Microsecond delay using DWT (Data Watchpoint and Trace) cycle counter
+// Must be defined BEFORE DHT11_Read to avoid implicit declaration warning
+static inline void DWT_Delay_us(uint32_t us)
 {
-    DHT11_Data_t out = {0};
-    /* TODO: implement DHT11 bit-bang on {{ dht_pin.port }}, PIN {{ dht_pin.pin }}.
-       Added stub that returns HAL_ERROR to avoid build issues. */
-    out.status = HAL_ERROR;
-    return out;
+    uint32_t startTick = DWT->CYCCNT;
+    uint32_t delayTicks = us * (SystemCoreClock / 1000000);
+    while((DWT->CYCCNT - startTick) < delayTicks);
+}
+
+// DHT11 Read function - Returns temperature and humidity
+DHT11_Data_t DHT11_Read(void)
+{
+    DHT11_Data_t dht_data = {0};
+    uint8_t data[5] = {0};
+    uint32_t timeout;
+    
+    // Set pin as output and send start signal
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_{{ dht_pin.pin }};
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init({{ dht_pin.port }}, &GPIO_InitStruct);
+    
+    // Send start signal: LOW for 18ms
+    HAL_GPIO_WritePin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}, GPIO_PIN_RESET);
+    HAL_Delay(18);
+    HAL_GPIO_WritePin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}, GPIO_PIN_SET);
+    DWT_Delay_us(20);  // Wait 20us
+    
+    // Set pin as input
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init({{ dht_pin.port }}, &GPIO_InitStruct);
+    
+    // Wait for DHT11 response (80us LOW + 80us HIGH)
+    timeout = 1000;
+    while(HAL_GPIO_ReadPin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}) == GPIO_PIN_SET && timeout--);
+    if(timeout == 0) { dht_data.status = HAL_ERROR; return dht_data; }
+    
+    timeout = 1000;
+    while(HAL_GPIO_ReadPin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}) == GPIO_PIN_RESET && timeout--);
+    if(timeout == 0) { dht_data.status = HAL_ERROR; return dht_data; }
+    
+    timeout = 1000;
+    while(HAL_GPIO_ReadPin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}) == GPIO_PIN_SET && timeout--);
+    if(timeout == 0) { dht_data.status = HAL_ERROR; return dht_data; }
+    
+    // Read 40 bits (5 bytes)
+    for(int i = 0; i < 5; i++) {
+        for(int j = 7; j >= 0; j--) {
+            // Wait for bit start (50us LOW)
+            timeout = 1000;
+            while(HAL_GPIO_ReadPin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}) == GPIO_PIN_RESET && timeout--);
+            if(timeout == 0) { dht_data.status = HAL_ERROR; return dht_data; }
+            
+            // Wait 40us and check if still HIGH
+            DWT_Delay_us(40);
+            if(HAL_GPIO_ReadPin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}) == GPIO_PIN_SET) {
+                data[i] |= (1 << j);  // Bit is 1
+            }
+            
+            // Wait for bit end
+            timeout = 1000;
+            while(HAL_GPIO_ReadPin({{ dht_pin.port }}, GPIO_PIN_{{ dht_pin.pin }}) == GPIO_PIN_SET && timeout--);
+            if(timeout == 0) { dht_data.status = HAL_ERROR; return dht_data; }
+        }
+    }
+    
+    // Verify checksum
+    if(data[4] != ((data[0] + data[1] + data[2] + data[3]) & 0xFF)) {
+        dht_data.status = HAL_ERROR;
+        return dht_data;
+    }
+    
+    // Parse data
+    dht_data.hum_int = data[0];
+    dht_data.hum_dec = data[1];
+    dht_data.temp_int = data[2];
+    dht_data.temp_dec = data[3];
+    dht_data.status = HAL_OK;
+    
+    return dht_data;
 }
 {% endif %}
 {% endif %}

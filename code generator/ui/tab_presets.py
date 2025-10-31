@@ -81,10 +81,13 @@ def create_presets_tab(parent_tab, app):
     app.cmb_preset_input.pack(fill="x")
     if input_options:
         app.cmb_preset_input.set(input_options[0])
-    app.cmb_preset_input.bind(
-        "<<ComboboxSelected>>",
-        lambda e: use_case_handler.toggle_formula_field(app, e),
-    )
+    
+    # Bind input changes to update valid outputs, formula, and threshold fields
+    def on_input_change(event):
+        use_case_handler.update_valid_outputs(app, event)  # Filter valid outputs based on input
+        use_case_handler.toggle_formula_field(app, event)
+    
+    app.cmb_preset_input.bind("<<ComboboxSelected>>", on_input_change)
 
     # ===================== 2) PROCESSING (OPTIONAL) =====================
     frm_proc = ttk.LabelFrame(main, text="2. Processing (Optional)", padding=10)
@@ -119,12 +122,12 @@ def create_presets_tab(parent_tab, app):
         lambda e: use_case_handler.toggle_threshold_field(app, e),
     )
 
-    # --- Conditional field (threshold) - shown only for Digital Output (LED) ---
+    # --- Conditional field (threshold) - shown only for Digital Output (LED) with ADC inputs ---
     app.frm_threshold = ttk.Frame(frm_out)
-    ttk.Label(app.frm_threshold, text="Activate GPIO high output when value is greater than:").pack(anchor="w")
+    ttk.Label(app.frm_threshold, text="Activate GPIO HIGH when ADC value is greater than:").pack(anchor="w")
     app.ent_threshold = ttk.Entry(app.frm_threshold)
     app.ent_threshold.pack(fill="x")
-    app.ent_threshold.insert(0, "2048")
+    app.ent_threshold.insert(0, "2048")  # Default for 12-bit ADC (0-4095)
 
     # ===================== 4) ACTIONS =====================
     btns = ttk.Frame(main)
@@ -146,9 +149,9 @@ def create_presets_tab(parent_tab, app):
     )
     app.btn_unlock_case.pack(side="left", padx=8)
 
-    # Initial state (handlers adjust visibility of threshold and formula)
+    # Initial state (handlers adjust visibility of threshold and formula, and filter valid outputs)
+    use_case_handler.update_valid_outputs(app, None)  # Set valid outputs based on initial input
     use_case_handler.toggle_formula_field(app, None)
-    use_case_handler.toggle_threshold_field(app)
 
     # Apply initial lock state
     _set_locked_state(app, bool(app.use_case_locked))

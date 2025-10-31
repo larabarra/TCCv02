@@ -19,7 +19,7 @@ extern "C" {
 #include "i2c.h"
 {% endif %}
 {% if OUT.uart %}
-#include "usart.h"
+#include "uart.h"
 {% endif %}
 {% if OUT.pwm %}
 #include "stm32g4xx_hal_tim.h"

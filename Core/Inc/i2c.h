@@ -22,7 +22,6 @@ extern I2C_HandleTypeDef hi2c1;
 /* --- I2C Slave Device Addresses --- */
 /* Slave Addresses for I2C1 Bus */
 #define GY521_MPU6050_ADDR (0xD0) 
-#define LCD_PCF8574_ADDR (0x4E) 
 
 /* --- Function Prototypes --- */
 void MX_I2C_Init(void);

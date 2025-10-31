@@ -8,53 +8,16 @@
   */
 
 #include "presets_out.h"
+#include <string.h>
 
 extern I2C_HandleTypeDef hi2c1;
-#define LCD_ADDR 0x4E
+extern UART_HandleTypeDef huart2;
 
-static void lcd_send_cmd(uint8_t cmd)
+
+HAL_StatusTypeDef OUT_UART_Print(const char *s)
 {
-    uint8_t u = (cmd & 0xF0);
-    uint8_t l = (cmd << 4) & 0xF0;
-    uint8_t t[4] = { u|0x0C, u|0x08, l|0x0C, l|0x08 };
-    HAL_I2C_Master_Transmit(&hi2c1, LCD_ADDR, t, 4, 100);
+    const uint8_t *p = (const uint8_t*)s;
+    return HAL_UART_Transmit(&huart2, (uint8_t*)p, (uint16_t)strlen(s), 100);
 }
-
-static void lcd_send_data(uint8_t data)
-{
-    uint8_t u = (data & 0xF0);
-    uint8_t l = (data << 4) & 0xF0;
-    uint8_t t[4] = { u|0x0D, u|0x09, l|0x0D, l|0x09 };
-    HAL_I2C_Master_Transmit(&hi2c1, LCD_ADDR, t, 4, 100);
-}
-
-void LCD_Clear(void) { lcd_send_cmd(0x01); HAL_Delay(2); }
-
-void LCD_Init(void)
-{
-    HAL_Delay(50);
-    lcd_send_cmd(0x30); HAL_Delay(5);
-    lcd_send_cmd(0x30); HAL_Delay(1);
-    lcd_send_cmd(0x30); HAL_Delay(1);
-    lcd_send_cmd(0x20); HAL_Delay(1);
-    lcd_send_cmd(0x28); HAL_Delay(1);
-    lcd_send_cmd(0x08); HAL_Delay(1);
-    LCD_Clear();
-    lcd_send_cmd(0x06); HAL_Delay(1);
-    lcd_send_cmd(0x0C); HAL_Delay(1);
-}
-
-void LCD_SendString(const char *s)
-{
-    while (*s) lcd_send_data((uint8_t)*s++);
-}
-
-void LCD_SetCursor(uint8_t row, uint8_t col)
-{
-    uint8_t row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
-    if (row >= 4) row = 0;
-    lcd_send_cmd(0x80 | (col + row_offsets[row]));
-}
-
 
 

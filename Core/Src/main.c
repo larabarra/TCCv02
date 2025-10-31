@@ -19,6 +19,7 @@
 
 #include "gpio.h"
 #include "i2c.h"
+#include "uart.h"
 #include "presets_in.h"
 #include "presets_out.h"
 
@@ -47,6 +48,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C_Init();
+  MX_UART_Init();
 
   // Initialize presets based on configuration
   Presets_Init();
@@ -113,27 +115,17 @@ void SystemClock_Config(void)
 void Presets_Init(void)
 {
   
-  // Initialize LCD first
-  HAL_Delay(100);
-  LCD_Init();
-  HAL_Delay(50);
-  LCD_Clear();
   
-  // Display startup message
-  LCD_SendString("MPU6050 Init...");
-  HAL_Delay(500);
+  
+  
   
   // Initialize MPU6050
   MPU6050_Init();
   HAL_Delay(100);
   
-  // Show ready message
-  LCD_Clear();
-  LCD_SendString("MPU6050 Ready!");
-  HAL_Delay(1000);
-  LCD_Clear();
   
   
+  // UART already initialized in MX_UART_Init()
 }
 
 /**
@@ -142,8 +134,10 @@ void Presets_Init(void)
   */
 void Presets_Process(void)
 {
+  
   static uint32_t last_update = 0;
-  char buffer[20];
+  char buffer[64];  // Buffer for UART/LCD text
+  
   
   // Update display every 200ms
   if (HAL_GetTick() - last_update < 200) {
@@ -151,46 +145,32 @@ void Presets_Process(void)
   }
   last_update = HAL_GetTick();
   
-  // ========== Preset: GY-521 Sensor -> LCD 20x4 (I2C) ==========
+  // ========== Preset: GY-521 Sensor -> UART ==========
   
   // Read GY-521 (MPU6050) accelerometer data
   float accel_x = 0.0f, accel_y = 0.0f, accel_z = 0.0f;
   MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z);
   
-  // Calculate magnitude
-  float magnitude = sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
-  float processed_value = magnitude;  // Use raw magnitude
-  
-  
-  // Process the output based on threshold
-  bool should_activate = true;  // Always activate when threshold is disabled
-  
-  // Close the input reading block for sensors that needed it
+  // Calculate magnitude (for reference, not used with UART output)
+  // float magnitude = sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
   
   // Process output based on type
-  // Display on LCD
-  LCD_Clear();
-  
-  // Display MPU6050 accelerometer values (X, Y, Z on separate lines)
-  // Convert floats to integers for display (ARM doesn't support %f by default)
+  // Send via UART
+  // Send MPU6050 accelerometer data via UART
+  // Convert floats to integers for transmission (ARM doesn't support %f by default)
   int16_t ax_int = (int16_t)(accel_x * 100.0f);
   int16_t ay_int = (int16_t)(accel_y * 100.0f);
   int16_t az_int = (int16_t)(accel_z * 100.0f);
   
-  snprintf(buffer, sizeof(buffer), "X:%d.%02d", ax_int/100, abs(ax_int%100));
-  LCD_SendString(buffer);
-  
-  LCD_SetCursor(1, 0);
-  snprintf(buffer, sizeof(buffer), "Y:%d.%02d", ay_int/100, abs(ay_int%100));
-  LCD_SendString(buffer);
-  
-  LCD_SetCursor(2, 0);
-  snprintf(buffer, sizeof(buffer), "Z:%d.%02d", az_int/100, abs(az_int%100));
-  LCD_SendString(buffer);
+  snprintf(buffer, sizeof(buffer), "X:%d.%02d Y:%d.%02d Z:%d.%02d\r\n", 
+           ax_int/100, abs(ax_int%100),
+           ay_int/100, abs(ay_int%100),
+           az_int/100, abs(az_int%100));
+  OUT_UART_Print(buffer);
   
   
   
-  HAL_Delay(100);  // Loop delay
+  
 }
 
 /* USER CODE BEGIN 4 (Old examples) */
