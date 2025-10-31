@@ -28,7 +28,7 @@
 
 {% for d in gy521_devices %}
 #define _MPU6050_HI2C   {{ d.handle }}
-#define _MPU6050_ADDR   {{ d.addr_macro }}
+#define _MPU6050_ADDR   ({{ d.addr_macro }} << 1)  // 8-bit address for HAL
 
 HAL_StatusTypeDef MPU6050_Init_I2C{{ d.num }}(void)
 {

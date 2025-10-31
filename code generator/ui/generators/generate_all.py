@@ -45,7 +45,7 @@ def generate_project_files(pinout_config: dict, peripheral_settings: dict, prese
     # 1) GPIO
     try:
         print("--- Processing: GPIO (MX_GPIO_Init) ---")
-        files_gpio = gpio_generator.generate_gpio_config(pinout_config.get("gpio", []))
+        files_gpio = gpio_generator.generate_gpio_config(pinout_config)
         if files_gpio: all_generated_files.extend(files_gpio)
     except Exception as e:
         print(f"[GPIO] generation error: {e}")
@@ -199,21 +199,43 @@ def _update_cmake_lists(generated_files: list[str]):
     with open(cmake_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Find the MX_Application_Src section and add our files before the closing parenthesis
-    pattern = r'(set\(MX_Application_Src\s*\n.*?)(\s*\))'
+    # Rebuild MX_Application_Src section completely to only include current files
+    # Define core STM32CubeMX files that should always be present (non-generated)
+    core_files = [
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32g4xx_it.c",
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32g4xx_hal_msp.c",
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c",
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c",
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32g474xx.s",
+    ]
     
-    def replace_sources(match):
-        existing_content = match.group(1)
-        closing_paren = match.group(2)
-        
-        # Add generated files with proper indentation and newlines
-        new_files = []
-        for file_path in generated_c_files:
-            new_files.append(f"    {file_path}")
-        
-        return existing_content + '\n' + '\n'.join(new_files) + '\n' + closing_paren
+    # Read as lines for easier processing
+    lines = content.split('\n')
+    new_lines = []
+    in_sources_section = False
     
-    updated_content = re.sub(pattern, replace_sources, content, flags=re.DOTALL)
+    for line in lines:
+        if line.strip().startswith('set(MX_Application_Src'):
+            in_sources_section = True
+            new_lines.append(line)
+            # Add only currently generated files (main.c, gpio.c, i2c.c, etc.)
+            for file_path in generated_c_files:
+                new_lines.append(f"    {file_path}")
+            # Add core files (non-generated, always present)
+            for core_file in core_files:
+                new_lines.append(f"    {core_file}")
+            continue
+        elif in_sources_section and line.strip() == ')':
+            new_lines.append(line)
+            in_sources_section = False
+            continue
+        elif in_sources_section:
+            # Skip old entries (we've already rebuilt the section)
+            continue
+        else:
+            new_lines.append(line)
+    
+    updated_content = '\n'.join(new_lines)
     
     # Write back the updated CMakeLists.txt
     with open(cmake_file, 'w', encoding='utf-8') as f:
@@ -245,7 +267,7 @@ def _generate_readme(pinout_config: dict, peripheral_settings: dict, preset_sett
     # Extract preset information
     presets = []
     if preset_settings:
-        presets = preset_settings.get("presets", []) or []
+        presets = preset_settings.get("cases", []) or []
     
     # Generate README content
     readme_content = f"""# STM32 Project Configuration
@@ -266,7 +288,7 @@ def _generate_readme(pinout_config: dict, peripheral_settings: dict, preset_sett
             mode = pin.get("mode", "?")
             pull = pin.get("pull", "-")
             speed = pin.get("speed", "-")
-            alternate = pin.get("alternate", "-")
+            alternate = pin.get("alternate_fn", pin.get("alternate", "-"))
             
             readme_content += f"| {pin_name} | {pin_num} | {port} | {mode} | {pull} | {speed} | {alternate} |\n"
     else:
@@ -283,15 +305,23 @@ def _generate_readme(pinout_config: dict, peripheral_settings: dict, preset_sett
             readme_content += f"\n#### {periph_type} ({periph_instance})\n"
             
             if periph_type == "I2C":
+                # Show I2C pins
+                i2c_pins = [p for p in gpio_config if periph_instance.upper() in str(p.get("alternate_fn", "")).upper()]
+                if i2c_pins:
+                    readme_content += "**Pins:**\n"
+                    for pin in i2c_pins:
+                        readme_content += f"- {pin.get('name', '?')} → {pin.get('port', '?')}{pin.get('pin', '?')}\n"
+                
+                # Show connected devices
                 devices = periph_settings.get("devices", [])
                 if devices:
-                    readme_content += "**Connected Devices:**\n"
+                    readme_content += "\n**Connected Devices:**\n"
                     for device in devices:
                         device_name = device.get("name", "Unknown")
                         device_addr = device.get("address", "Unknown")
                         readme_content += f"- {device_name} (Address: 0x{device_addr:02X})\n"
                 else:
-                    readme_content += "No devices configured.\n"
+                    readme_content += "\nNo devices configured.\n"
             
             elif periph_type == "UART":
                 baudrate = periph_settings.get("baudrate", "Unknown")
@@ -325,18 +355,30 @@ def _generate_readme(pinout_config: dict, peripheral_settings: dict, preset_sett
     
     if presets:
         for i, preset in enumerate(presets, 1):
-            input_key = preset.get("input_key", "Unknown")
-            output_key = preset.get("output_key", "Unknown")
-            threshold = preset.get("threshold", "N/A")
-            formula = preset.get("formula", "N/A")
-            convert_enabled = preset.get("convert_enabled", False)
+            input_key = preset.get("input_key", "Unknown Input")
+            output_key = preset.get("output_key", "Unknown Output")
             
-            readme_content += f"\n#### Use Case {i}: {input_key} → {output_key}\n"
-            readme_content += f"- **Input:** {input_key}\n"
-            readme_content += f"- **Output:** {output_key}\n"
-            readme_content += f"- **Threshold:** {threshold}\n"
-            readme_content += f"- **Formula:** {formula}\n"
-            readme_content += f"- **Value Conversion:** {'Enabled' if convert_enabled else 'Disabled'}\n"
+            readme_content += f"\n**Use Case {i}:** {input_key} → {output_key}\n"
+            
+            # Show input peripheral
+            input_periph = preset.get("peripheral_settings", {}).get("input_peripheral", {})
+            if input_periph:
+                readme_content += f"- Input: {input_periph.get('type', '?')} ({input_periph.get('instance', '?')})\n"
+            
+            # Show output peripheral
+            output_periph = preset.get("peripheral_settings", {}).get("output_peripheral", {})
+            if output_periph:
+                readme_content += f"- Output: {output_periph.get('type', '?')} ({output_periph.get('instance', '?')})\n"
+            
+            # Show formula if enabled
+            processing = preset.get("processing", {})
+            if processing.get("enabled"):
+                readme_content += f"- Formula: `{processing.get('formula', 'N/A')}`\n"
+            
+            # Show threshold if enabled
+            threshold = preset.get("threshold", {})
+            if threshold.get("enabled"):
+                readme_content += f"- Threshold: {threshold.get('value', 'N/A')}\n"
     else:
         readme_content += "No preset use cases configured.\n"
     

@@ -127,21 +127,23 @@ def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
     # Derive configuration
     mode = pin_config.get("mode", "INPUT")
     pull = pin_config.get("pull", "NOPULL")
-    speed, afn = "LOW", 0
+    speed, afn = "LOW", ""
 
     if p_type.upper() == "I2C":
         mode, pull, speed = "AF_OD", "PULLUP", "VERY_HIGH"
         afs = app.mcu_data.get("i2c_af_mapping", {}).get(p_instance, {}) if hasattr(app, "mcu_data") else {}
-        afn = utils.af_str_to_num(afs.get(p_pin, "")) if hasattr(utils, "af_str_to_num") else 0
+        afn = afs.get(p_pin, "")  # Store full AF constant like "GPIO_AF4_I2C1"
 
     elif p_type.upper() in ("UART", "USART"):
         mode, pull, speed = "AF_PP", "NOPULL", "VERY_HIGH"
         afs = app.mcu_data.get("uart_af_mapping", {}).get(p_instance, {}) if hasattr(app, "mcu_data") else {}
-        afn = utils.af_str_to_num(afs.get(p_pin, "")) if hasattr(utils, "af_str_to_num") else 0
+        afn = afs.get(p_pin, "")  # Store full AF constant
 
     elif p_type.upper() == "TIM":
         # PWM/TIM normally AF_PP
         mode, pull, speed = "AF_PP", "NOPULL", "HIGH"
+        afs = app.mcu_data.get("tim_af_mapping", {}).get(p_instance, {}) if hasattr(app, "mcu_data") else {}
+        afn = afs.get(p_pin, "")  # Store full AF constant
 
     elif p_type.upper() == "GPIO":
         # Simple GPIO: respects parent overrides (if provided)

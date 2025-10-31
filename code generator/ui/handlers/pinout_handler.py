@@ -34,8 +34,8 @@ def on_role_change(app, event=None):
 
 def on_pin_change(app, event=None):
     t = app.cmb_type.get(); inst = app.cmb_inst.get(); pin = app.cmb_pin.get()
-    afs = app.mcu_data.get(f"{t.lower()}_af_mapping", {}).get(inst, {}); af_num = utils.af_str_to_num(afs.get(pin, ""))
-    app.ent_af.delete(0, "end"); app.ent_af.insert(0, str(af_num))
+    afs = app.mcu_data.get(f"{t.lower()}_af_mapping", {}).get(inst, {}); af_const = afs.get(pin, "")
+    app.ent_af.delete(0, "end"); app.ent_af.insert(0, af_const)
     if not app.ent_label.get().strip(): app.ent_label.insert(0, f"{inst}_{app.cmb_role.get().upper()}")
 
 def add_row(app):
@@ -45,8 +45,7 @@ def add_row(app):
     t = app.cmb_type.get()
     if t != "GPIO" and (not app.cmb_inst.get() or not app.cmb_role.get()): messagebox.showwarning("Incomplete", "Please select instance and function."); return
     port, pin_num = utils.split_pin(pin_label)
-    try: afn = int(app.ent_af.get() or "0")
-    except ValueError: afn = 0
+    afn = app.ent_af.get().strip() or ""  # Store full AF constant string
     app.selections.append({"type": t, "instance": "" if t=="GPIO" else app.cmb_inst.get(), "name": app.ent_label.get().strip() or "SIGNAL", "port": port, "pin": pin_num, "mode": app.cmb_mode.get(), "pull": app.cmb_pull.get(), "speed": app.cmb_speed.get(), "alternate_fn": afn})
     app.refresh_table(); app.ent_label.delete(0, "end"); app.update_peripheral_tabs_state()
 

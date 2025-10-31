@@ -112,10 +112,19 @@ add_custom_target(hex ALL
 # Ex.: C:/ST/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe
 set(CUBE_PROG "C:/ST/STM32CubeCLT_1.19.0/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe")
 
+# Check if STM32_Programmer_CLI exists
+if(NOT EXISTS "${CUBE_PROG}")
+  message(WARNING "STM32_Programmer_CLI not found at: ${CUBE_PROG}")
+  message(WARNING "Flash target will not work. Please update CUBE_PROG path in CMakeLists.txt")
+endif()
+
 add_custom_target(flash
-  COMMAND "${CUBE_PROG}" -c port=SWD mode=UR reset=HWrst -w
-          $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.hex
+  COMMAND ${CMAKE_COMMAND} -E echo "Attempting to flash via ST-LINK..."
+  COMMAND ${CMAKE_COMMAND} -E echo "Hex file: $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.hex"
+  COMMAND "${CUBE_PROG}" -c port=SWD mode=UR reset=HWrst -w 
+          "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${CMAKE_PROJECT_NAME}>.hex"
           -v -rst
-  DEPENDS ${CMAKE_PROJECT_NAME}
+  DEPENDS ${CMAKE_PROJECT_NAME} hex
   COMMENT "Gravando .hex na placa via ST-LINK"
+  USES_TERMINAL
 )
