@@ -49,5 +49,12 @@ void LCD_SendString(const char *s)
     while (*s) lcd_send_data((uint8_t)*s++);
 }
 
+void LCD_SetCursor(uint8_t row, uint8_t col)
+{
+    uint8_t row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
+    if (row >= 4) row = 0;
+    lcd_send_cmd(0x80 | (col + row_offsets[row]));
+}
+
 
 

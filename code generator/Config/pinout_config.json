@@ -3,7 +3,7 @@
   "microcontroller": "STM32G474RE",
   "gpio": [
     {
-      "name": "I2C1_SCL",
+      "name": "GY521_SCL",
       "port": "GPIOB",
       "pin": 8,
       "mode": "AF_OD",
@@ -12,7 +12,7 @@
       "alternate_fn": "GPIO_AF4_I2C1"
     },
     {
-      "name": "I2C1_SDA",
+      "name": "GY521_SDA",
       "port": "GPIOB",
       "pin": 9,
       "mode": "AF_OD",

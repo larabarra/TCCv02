@@ -24,9 +24,9 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 
-#define GY521_SCL_Pin GPIO_PIN_6
+#define GY521_SCL_Pin GPIO_PIN_8
 #define GY521_SCL_GPIO_Port GPIOB
-#define GY521_SDA_Pin GPIO_PIN_7
+#define GY521_SDA_Pin GPIO_PIN_9
 #define GY521_SDA_GPIO_Port GPIOB
 
 /* coisas que já vem configuradas no STM32CubeMX */

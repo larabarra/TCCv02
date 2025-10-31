@@ -15,24 +15,41 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 {# Conditionally include peripheral headers if they have been configured #}
-{% if gpio_configs %}#include "gpio.h"{% endif %}
-{% if i2c_interfaces %}#include "i2c.h"{% endif %}
-{% if uart_interfaces %}#include "uart.h"{% endif %}
-{% if preset_example_needed %}#include "presets_in.h"
-#include "presets_out.h"{% endif %}
+{% if gpio_configs %}
+#include "gpio.h"
+{% endif %}
+{% if i2c_interfaces %}
+#include "i2c.h"
+{% endif %}
+{% if uart_interfaces %}
+#include "uart.h"
+{% endif %}
+{% if preset_example_needed %}
+#include "presets_in.h"
+#include "presets_out.h"
+{% endif %}
 
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
 {# Generate prototypes for example tasks if they will be created #}
-{% if preset_example_needed %}void Presets_Init(void);
-void Presets_Process(void);{% endif %}
-{% if gpio_example_needed %}static void GPIO_Example_Task(void);{% endif %}
-{% if i2c_example_needed %}static void I2C_Example_Task(void);{% endif %}
-{% if uart_example_needed %}static void UART_Example_Task(void);{% endif %}
+{% if preset_example_needed %}
+void Presets_Init(void);
+void Presets_Process(void);
+{% endif %}
+{% if gpio_example_needed %}
+static void GPIO_Example_Task(void);
+{% endif %}
+{% if i2c_example_needed %}
+static void I2C_Example_Task(void);
+{% endif %}
+{% if uart_example_needed %}
+static void UART_Example_Task(void);
+{% endif %}
 
 
 /**
@@ -50,10 +67,18 @@ int main(void)
   SystemClock_Config();
 
   /* Initialize all configured peripherals */
-{% if gpio_configs %}MX_GPIO_Init();{% endif %}
-{% if i2c_interfaces %}MX_I2C_Init();{% endif %}
-{% if uart_interfaces %}MX_UART_Init();{% endif %}
-{% if adc_interfaces %}MX_ADC_Init();{% endif %}
+  {% if gpio_configs %}
+  MX_GPIO_Init();
+  {% endif %}
+  {% if i2c_interfaces %}
+  MX_I2C_Init();
+  {% endif %}
+  {% if uart_interfaces %}
+  MX_UART_Init();
+  {% endif %}
+  {% if adc_interfaces %}
+  MX_ADC_Init();
+  {% endif %}
 
   {% if preset_example_needed %}
   // Initialize presets based on configuration
@@ -133,12 +158,47 @@ void SystemClock_Config(void)
   */
 void Presets_Init(void)
 {
+  {% set has_lcd = namespace(value=false) %}
+  {% set has_mpu6050 = namespace(value=false) %}
   {% for case in preset_cases %}
-  // Initialize: {{ case.get("input_key", "Unknown input") }} -> {{ case.get("output_key", "Unknown output") }}
-  {% if case.input_type == "gy521" %}
-  // GY-521 (MPU6050) initialization
+    {% if case.output_type == "lcd" %}
+      {% set has_lcd.value = true %}
+    {% endif %}
+    {% if case.input_type == "gy521" %}
+      {% set has_mpu6050.value = true %}
+    {% endif %}
+  {% endfor %}
+  
+  {% if has_lcd.value %}
+  // Initialize LCD first
+  HAL_Delay(100);
+  LCD_Init();
+  HAL_Delay(50);
+  LCD_Clear();
+  {% endif %}
+  
+  {% if has_mpu6050.value %}
+  {% if has_lcd.value %}
+  // Display startup message
+  LCD_SendString("MPU6050 Init...");
+  HAL_Delay(500);
+  {% endif %}
+  
+  // Initialize MPU6050
   MPU6050_Init();
-  {% elif case.input_type == "dht11" %}
+  HAL_Delay(100);
+  
+  {% if has_lcd.value %}
+  // Show ready message
+  LCD_Clear();
+  LCD_SendString("MPU6050 Ready!");
+  HAL_Delay(1000);
+  LCD_Clear();
+  {% endif %}
+  {% endif %}
+  
+  {% for case in preset_cases %}
+  {% if case.input_type == "dht11" %}
   // DHT11 initialization
   // GPIO pin already configured in MX_GPIO_Init()
   {% elif case.input_type == "potentiometer" %}
@@ -146,11 +206,7 @@ void Presets_Init(void)
   // ADC already configured in CubeMX
   {% endif %}
   
-  {% if case.output_type == "lcd" %}
-  // LCD initialization
-  LCD_Init();
-  LCD_Clear();
-  {% elif case.output_type == "uart" %}
+  {% if case.output_type == "uart" %}
   // UART already initialized in MX_UART_Init()
   {% elif case.output_type == "pwm" %}
   // PWM timer already initialized in CubeMX
@@ -164,13 +220,22 @@ void Presets_Init(void)
   */
 void Presets_Process(void)
 {
+  static uint32_t last_update = 0;
+  char buffer[20];
+  
+  // Update display every 200ms
+  if (HAL_GetTick() - last_update < 200) {
+    return;
+  }
+  last_update = HAL_GetTick();
+  
   {% for case in preset_cases %}
   // ========== Preset: {{ case.get("input_key", "Unknown") }} -> {{ case.get("output_key", "Unknown") }} ==========
   
   {% if case.input_type == "gy521" %}
   // Read GY-521 (MPU6050) accelerometer data
   float accel_x = 0.0f, accel_y = 0.0f, accel_z = 0.0f;
-    MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z);
+  MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z);
   
   // Calculate magnitude
   float magnitude = sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
@@ -239,15 +304,36 @@ void Presets_Process(void)
   // Process output based on type
   {% if case.output_type == "lcd" %}
   // Display on LCD
+  LCD_Clear();
+  
+  {% if case.input_type == "gy521" %}
+  // Display MPU6050 accelerometer values (X, Y, Z on separate lines)
+  // Convert floats to integers for display (ARM doesn't support %f by default)
+  int16_t ax_int = (int16_t)(accel_x * 100.0f);
+  int16_t ay_int = (int16_t)(accel_y * 100.0f);
+  int16_t az_int = (int16_t)(accel_z * 100.0f);
+  
+  snprintf(buffer, sizeof(buffer), "X:%d.%02d", ax_int/100, abs(ax_int%100));
+  LCD_SendString(buffer);
+  
+  LCD_SetCursor(1, 0);
+  snprintf(buffer, sizeof(buffer), "Y:%d.%02d", ay_int/100, abs(ay_int%100));
+  LCD_SendString(buffer);
+  
+  LCD_SetCursor(2, 0);
+  snprintf(buffer, sizeof(buffer), "Z:%d.%02d", az_int/100, abs(az_int%100));
+  LCD_SendString(buffer);
+  {% else %}
+  // Generic display for other sensor types
   if (should_activate)
   {
-    LCD_SendString("ACTIVE: VALUE");
-    // You can use sprintf to format the value
+    LCD_SendString("ACTIVE");
   }
   else
   {
-    LCD_SendString("INACTIVE    ");
+    LCD_SendString("INACTIVE");
   }
+  {% endif %}
   
   {% elif case.output_type == "uart" %}
   // Send via UART

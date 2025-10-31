@@ -69,8 +69,8 @@
       "instance": "I2C1",
       "label_prefix": "GY521",
       "pins": [
-        { "role": "scl", "pin_choice": "PB6" },
-        { "role": "sda", "pin_choice": "PB7" }
+        { "role": "scl", "pin_choice": "PB8" },
+        { "role": "sda", "pin_choice": "PB9" }
       ],
       "settings": {
         "clockSpeed": "100 kHz (Standard)",
@@ -87,8 +87,8 @@
       "instance": "I2C1",
       "label_prefix": "LCD_DISPLAY",
       "pins": [
-        { "role": "scl", "pin_choice": "PB6" },
-        { "role": "sda", "pin_choice": "PB7" }
+        { "role": "scl", "pin_choice": "PB8" },
+        { "role": "sda", "pin_choice": "PB9" }
       ],
       "settings": {
         "clockSpeed": "100 kHz (Standard)",

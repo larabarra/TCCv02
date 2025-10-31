@@ -15,17 +15,20 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "gpio.h"
 #include "i2c.h"
 #include "presets_in.h"
 #include "presets_out.h"
 
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
 void Presets_Init(void);
 void Presets_Process(void);
+
 
 /**
   * @brief  The application entry point.
@@ -44,6 +47,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C_Init();
+
   // Initialize presets based on configuration
   Presets_Init();
 
@@ -108,32 +112,28 @@ void SystemClock_Config(void)
   */
 void Presets_Init(void)
 {
-  // Test: I2C Scanner + LCD Test
   
-  // Give I2C time to stabilize
+  // Initialize LCD first
+  HAL_Delay(100);
+  LCD_Init();
+  HAL_Delay(50);
+  LCD_Clear();
+  
+  // Display startup message
+  LCD_SendString("MPU6050 Init...");
   HAL_Delay(500);
   
-  // Scan I2C bus for devices (watch with logic analyzer!)
-  // This will generate I2C traffic for each address tested
-  uint8_t found_addr = 0;
-  for(uint8_t addr = 0x20; addr <= 0x7E; addr += 2) {
-    if(HAL_I2C_IsDeviceReady(&hi2c1, addr, 1, 10) == HAL_OK) {
-      found_addr = addr;  // Device found! Set breakpoint here or check with logic analyzer
-      break;
-    }
-    HAL_Delay(5);  // Small delay between attempts
-  }
-  
-  // Try LCD initialization
-  LCD_Init();
+  // Initialize MPU6050
+  MPU6050_Init();
   HAL_Delay(100);
   
+  // Show ready message
   LCD_Clear();
-  HAL_Delay(50);
+  LCD_SendString("MPU6050 Ready!");
+  HAL_Delay(1000);
+  LCD_Clear();
   
-  // Display test message
-  LCD_SendString("Hello World!");
-  HAL_Delay(100);
+  
 }
 
 /**
@@ -142,20 +142,55 @@ void Presets_Init(void)
   */
 void Presets_Process(void)
 {
-  // LCD Test - Simple counter
-  static uint32_t counter = 0;
+  static uint32_t last_update = 0;
   char buffer[20];
   
-  // Update display every second
-  HAL_Delay(1000);
+  // Update display every 200ms
+  if (HAL_GetTick() - last_update < 200) {
+    return;
+  }
+  last_update = HAL_GetTick();
   
+  // ========== Preset: GY-521 Sensor -> LCD 20x4 (I2C) ==========
+  
+  // Read GY-521 (MPU6050) accelerometer data
+  float accel_x = 0.0f, accel_y = 0.0f, accel_z = 0.0f;
+  MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z);
+  
+  // Calculate magnitude
+  float magnitude = sqrt(accel_x * accel_x + accel_y * accel_y + accel_z * accel_z);
+  float processed_value = magnitude;  // Use raw magnitude
+  
+  
+  // Process the output based on threshold
+  bool should_activate = true;  // Always activate when threshold is disabled
+  
+  // Close the input reading block for sensors that needed it
+  
+  // Process output based on type
+  // Display on LCD
   LCD_Clear();
-  LCD_SendString("Hello World!");
   
-  // Optionally show a counter to verify it's updating
-  // (Comment out if you just want static text)
-  // sprintf(buffer, "Count: %lu", counter++);
-  // LCD_SendString(buffer);
+  // Display MPU6050 accelerometer values (X, Y, Z on separate lines)
+  // Convert floats to integers for display (ARM doesn't support %f by default)
+  int16_t ax_int = (int16_t)(accel_x * 100.0f);
+  int16_t ay_int = (int16_t)(accel_y * 100.0f);
+  int16_t az_int = (int16_t)(accel_z * 100.0f);
+  
+  snprintf(buffer, sizeof(buffer), "X:%d.%02d", ax_int/100, abs(ax_int%100));
+  LCD_SendString(buffer);
+  
+  LCD_SetCursor(1, 0);
+  snprintf(buffer, sizeof(buffer), "Y:%d.%02d", ay_int/100, abs(ay_int%100));
+  LCD_SendString(buffer);
+  
+  LCD_SetCursor(2, 0);
+  snprintf(buffer, sizeof(buffer), "Z:%d.%02d", az_int/100, abs(az_int%100));
+  LCD_SendString(buffer);
+  
+  
+  
+  HAL_Delay(100);  // Loop delay
 }
 
 /* USER CODE BEGIN 4 (Old examples) */

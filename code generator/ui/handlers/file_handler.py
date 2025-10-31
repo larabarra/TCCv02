@@ -288,6 +288,20 @@ def get_pinout_config(app) -> dict:
 
     gpio_entries = []
     for r in getattr(app, "selections", []):
+        # Extract alternate function: handle both "GPIO_AF4_I2C1" and "4" formats
+        af_value = r.get("alternate_fn", 0) or 0
+        if isinstance(af_value, str) and af_value.startswith("GPIO_AF"):
+            # Extract number from "GPIO_AF4_I2C1" -> store the full string
+            alternate_fn = af_value
+        elif isinstance(af_value, str) and af_value.isdigit():
+            # If it's a string number like "4", convert to int then back to string
+            alternate_fn = f"GPIO_AF{af_value}"
+        elif isinstance(af_value, int):
+            # If it's an int, format as GPIO_AFx
+            alternate_fn = f"GPIO_AF{af_value}" if af_value > 0 else ""
+        else:
+            alternate_fn = ""
+        
         gpio_entries.append({
             "name":         r.get("name", ""),
             "port":         _port_to_hal(r.get("port", "")),              # Convert to GPIOA/GPIOB/...
@@ -295,7 +309,7 @@ def get_pinout_config(app) -> dict:
             "mode":         (r.get("mode", "INPUT") or "INPUT").upper(),  # INPUT/OUTPUT_PP/AF_PP...
             "pull":         (r.get("pull", "NOPULL") or "NOPULL").upper(),
             "speed":        (r.get("speed", "LOW") or "LOW").upper(),
-            "alternate_fn": int(str(r.get("alternate_fn", 0) or 0)),      # Alternate function number
+            "alternate_fn": alternate_fn,                                  # Full AF constant string
         })
 
     return {
