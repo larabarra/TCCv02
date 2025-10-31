@@ -17,9 +17,9 @@
 #include <string.h>
 
 {# Conditionally include peripheral headers if they have been configured #}
-{% if gpio_example_needed %}#include "gpio.h"{% endif %}
-{% if i2c_example_needed %}#include "i2c.h"{% endif %}
-{% if uart_example_needed %}#include "uart.h"{% endif %}
+{% if gpio_configs %}#include "gpio.h"{% endif %}
+{% if i2c_interfaces %}#include "i2c.h"{% endif %}
+{% if uart_interfaces %}#include "uart.h"{% endif %}
 {% if preset_example_needed %}#include "presets_in.h"
 #include "presets_out.h"{% endif %}
 
@@ -50,9 +50,10 @@ int main(void)
   SystemClock_Config();
 
   /* Initialize all configured peripherals */
-  {% if gpio_configs %}MX_GPIO_Init();{% endif %}
-  {% if i2c_interfaces %}MX_I2C_Init();{% endif %}
-  {% if uart_interfaces %}MX_UART_Init();{% endif %}
+{% if gpio_configs %}MX_GPIO_Init();{% endif %}
+{% if i2c_interfaces %}MX_I2C_Init();{% endif %}
+{% if uart_interfaces %}MX_UART_Init();{% endif %}
+{% if adc_interfaces %}MX_ADC_Init();{% endif %}
 
   {% if preset_example_needed %}
   // Initialize presets based on configuration
@@ -136,7 +137,7 @@ void Presets_Init(void)
   // Initialize: {{ case.get("input_key", "Unknown input") }} -> {{ case.get("output_key", "Unknown output") }}
   {% if case.input_type == "gy521" %}
   // GY-521 (MPU6050) initialization
-  // Will initialize in Presets_Process()
+  MPU6050_Init();
   {% elif case.input_type == "dht11" %}
   // DHT11 initialization
   // GPIO pin already configured in MX_GPIO_Init()
@@ -227,7 +228,7 @@ void Presets_Process(void)
   uint16_t threshold = {{ case.get("threshold", {}).get("value", "1000") }};
   bool should_activate = processed_value > threshold;
   {% else %}
-  bool should_activate = processed_value > 0.5f;  // Default threshold
+  bool should_activate = true;  // Always activate when threshold is disabled
   {% endif %}
   
   // Close the input reading block for sensors that needed it

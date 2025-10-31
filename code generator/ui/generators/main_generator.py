@@ -67,9 +67,19 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_s
         "preset_cases": [],
     }
 
+    # Support both new format (gpio: [...]) and old format (peripherals: [...])
+    gpio_pins = pinout_config.get("gpio", [])
     pinout_blocks = pinout_config.get("peripherals", [])
     
-    # 2. First pass: group configurations by type and gather all pins for main.h
+    # 2. First pass: collect pins from both formats
+    if gpio_pins:
+        # New format: direct GPIO list
+        context["all_pins"].extend(gpio_pins)
+        if gpio_pins:
+            # Mark that we have GPIO configs
+            context["gpio_configs"] = [{"pins": gpio_pins}]  # Create dummy block structure for template
+    
+    # Old format: blocks with peripherals
     for block in pinout_blocks:
         # Add all pins from this block to the global pin list for #defines
         context["all_pins"].extend(block.get("pins", []))

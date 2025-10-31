@@ -7,13 +7,13 @@
     ],
 
     "i2c_interfaces": {
-      "I2C1": { "scl": ["PB6", "PB8"], "sda": ["PB7", "PB9"] },
+      "I2C1": { "scl": ["PA15", "PB6", "PB8"], "sda": ["PB7", "PB9"] },
       "I2C2": { "scl": ["PB10"], "sda": ["PB11", "PB3"] }
     },
 
     "i2c_af_mapping": {
       "I2C1": {
-        "PB6": "GPIO_AF4_I2C1", "PB7": "GPIO_AF4_I2C1", "PB8": "GPIO_AF4_I2C1", "PB9": "GPIO_AF4_I2C1"
+        "PA15": "GPIO_AF4_I2C1", "PB6": "GPIO_AF4_I2C1", "PB7": "GPIO_AF4_I2C1", "PB8": "GPIO_AF4_I2C1", "PB9": "GPIO_AF4_I2C1"
       },
       "I2C2": {
         "PB10": "GPIO_AF4_I2C2", "PB11": "GPIO_AF4_I2C2", "PB3": "GPIO_AF9_I2C2"
@@ -24,6 +24,15 @@
       "ADC1": [
         "ADC_IN1","ADC_IN2","ADC_IN3","ADC_IN4","ADC_IN5","ADC_IN6","ADC_IN7","ADC_IN8",
         "ADC_IN9","ADC_IN10","ADC_IN11","ADC_IN12","ADC_IN13","ADC_IN14","ADC_IN15","ADC_IN16"
+      ],
+      "ADC2": [
+        "ADC2_IN17"
+      ],
+      "ADC3": [
+        "ADC3_IN12"
+      ],
+      "ADC12": [
+        "ADC12_IN1","ADC12_IN2","ADC12_IN6","ADC12_IN7"
       ]
     },
 
@@ -33,10 +42,23 @@
         "ADC_IN6": "PA5", "ADC_IN7": "PA6", "ADC_IN8": "PA7", "ADC_IN9": "PB0", "ADC_IN10": "PB1",
         "ADC_IN11": "PC0", "ADC_IN12": "PC1", "ADC_IN13": "PC2", "ADC_IN14": "PC3", "ADC_IN15": "PC4",
         "ADC_IN16": "PC5"
+      },
+      "ADC2": {
+        "ADC2_IN17": "PA4"
+      },
+      "ADC3": {
+        "ADC3_IN12": "PB0"
+      },
+      "ADC12": {
+        "ADC12_IN1": "PA0",
+        "ADC12_IN2": "PA1",
+        "ADC12_IN6": "PC0",
+        "ADC12_IN7": "PC1"
       }
     },
     
     "uart_interfaces": {
+      "LPUART1": { "tx": ["PA2"], "rx": ["PA3"] },
       "UART1": { "tx": ["PA9", "PB6"], "rx": ["PA10", "PB7"] },
       "UART2": { "tx": ["PA2", "PA14"], "rx": ["PA3", "PA15"] },
       "UART3": { "tx": ["PB10", "PC4"], "rx": ["PB11", "PC5"] },
@@ -44,6 +66,9 @@
     },
     
     "uart_af_mapping": {
+      "LPUART1": {
+        "PA2": "GPIO_AF12_LPUART1", "PA3": "GPIO_AF12_LPUART1"
+      },
       "UART1": {
         "PA9": "GPIO_AF7_USART1", "PA10": "GPIO_AF7_USART1", "PB6": "GPIO_AF7_USART1", "PB7": "GPIO_AF7_USART1"
       },
@@ -73,6 +98,28 @@
       },
       "SPI3": {
         "PC10": "GPIO_AF6_SPI3", "PB3": "GPIO_AF6_SPI3", "PC11": "GPIO_AF6_SPI3", "PB4": "GPIO_AF6_SPI3", "PC12": "GPIO_AF6_SPI3", "PB5": "GPIO_AF6_SPI3"
+      }
+    },
+
+    "tim_interfaces": {
+      "TIM2": { "ch1": [], "ch2": ["PB3"], "ch3": ["PB10"] },
+      "TIM3": { "ch1": ["PB4"], "ch2": ["PA7", "PC7"] },
+      "TIM4": { "ch1": ["PB6"] },
+      "TIM8": { "ch2": ["PC7"] }
+    },
+
+    "tim_af_mapping": {
+      "TIM2": {
+        "PB3": "GPIO_AF1_TIM2", "PB10": "GPIO_AF1_TIM2"
+      },
+      "TIM3": {
+        "PB4": "GPIO_AF1_TIM3", "PA7": "GPIO_AF1_TIM3", "PC7": "GPIO_AF1_TIM3"
+      },
+      "TIM4": {
+        "PB6": "GPIO_AF2_TIM4"
+      },
+      "TIM8": {
+        "PC7": "GPIO_AF4_TIM8"
       }
     }
   }

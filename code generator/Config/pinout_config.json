@@ -3,22 +3,22 @@
   "microcontroller": "STM32G474RE",
   "gpio": [
     {
-      "name": "GY521_SCL",
+      "name": "I2C1_SCL",
       "port": "GPIOB",
-      "pin": 6,
+      "pin": 8,
       "mode": "AF_OD",
       "pull": "PULLUP",
       "speed": "VERY_HIGH",
-      "alternate_fn": 4
+      "alternate_fn": "GPIO_AF4_I2C1"
     },
     {
-      "name": "GY521_SDA",
+      "name": "I2C1_SDA",
       "port": "GPIOB",
-      "pin": 7,
+      "pin": 9,
       "mode": "AF_OD",
       "pull": "PULLUP",
       "speed": "VERY_HIGH",
-      "alternate_fn": 4
+      "alternate_fn": "GPIO_AF4_I2C1"
     }
   ],
   "artifact_manifest": {

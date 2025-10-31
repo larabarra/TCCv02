@@ -141,6 +141,8 @@ def generate_presets_files(
 
     # --- Extract inputs/outputs from preset_settings ---
     cases = (preset_settings or {}).get("cases", []) or []
+    # Filter out empty cases (dicts with no meaningful content)
+    cases = [c for c in cases if c and (c.get("input_key") or c.get("output_key"))]
     
     # Check if inputs/outputs are enabled in any case
     has_gy521 = False
@@ -196,8 +198,11 @@ def generate_presets_files(
             case_devices = input_periph.get("settings", {}).get("devices", [])
             gy521_list = _get_device_list(case_devices, "GY521")
             gy521_list.extend(_get_device_list(case_devices, "MPU6050"))
+            # Extract I2C instance number
+            inst_num = _digits(inst)  # Extract number from "I2C1" -> "1"
             for dev in gy521_list:
                 dev["handle"] = i2c_handle
+                dev["num"] = inst_num  # Override with I2C instance number
             # Only add devices that aren't already in the list
             for dev in gy521_list:
                 if not any(existing.get("name") == dev.get("name") for existing in gy521_devices):
@@ -226,6 +231,13 @@ def generate_presets_files(
         has_uart = bool(outputs.get("UART"))
         has_pwm = bool(outputs.get("PWM"))
         has_dout = bool(outputs.get("Digital Output (LED)"))
+    
+    # Early return if no presets are configured at all
+    has_any_input = has_gy521 or has_din or has_dht11 or has_ky013 or has_pot
+    has_any_output = has_lcd or has_uart or has_pwm or has_dout
+    if not cases and not has_any_input and not has_any_output:
+        # No presets configured, don't generate preset files
+        return []
     
     # --- Build pin information from pinout_config ---
     gpio_config = (pinout_config or {}).get("gpio", []) or []

@@ -19,22 +19,22 @@ void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-{% for gpio in gpio_config %}
+{% for gpio in (gpio_config or pins or []) %}
   __HAL_RCC_{{ gpio.port }}_CLK_ENABLE();
 {% endfor %}
 
-{% for gpio in gpio_config %}
+{% for gpio in (gpio_config or pins or []) %}
   /*Configure GPIO pin : {{ gpio.name }} */
   GPIO_InitStruct.Pin = GPIO_PIN_{{ gpio.pin }};
-  GPIO_InitStruct.Mode = GPIO_MODE_{{ gpio.mode }};
+  GPIO_InitStruct.Mode = {{ map_mode.get(gpio.mode, 'GPIO_MODE_INPUT') }};
 {% if gpio.pull %}
-  GPIO_InitStruct.Pull = GPIO_{{ gpio.pull }};
+  GPIO_InitStruct.Pull = {{ map_pull.get(gpio.pull, 'GPIO_NOPULL') }};
 {% endif %}
 {% if gpio.speed %}
-  GPIO_InitStruct.Speed = GPIO_SPEED_{{ gpio.speed }};
+  GPIO_InitStruct.Speed = {{ map_speed.get(gpio.speed, 'GPIO_SPEED_FREQ_LOW') }};
 {% endif %}
-{% if gpio.alternate %}
-  GPIO_InitStruct.Alternate = GPIO_{{ gpio.alternate }};
+{% if gpio.alternate_fn %}
+  GPIO_InitStruct.Alternate = {{ gpio.alternate_fn }};
 {% endif %}
   HAL_GPIO_Init({{ gpio.port }}, &GPIO_InitStruct);
 

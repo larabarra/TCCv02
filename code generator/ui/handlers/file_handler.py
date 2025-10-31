@@ -56,20 +56,29 @@ def export_config(app):
     preset_filepath = os.path.join(folder_path, "preset_settings.json")
 
     try:
-        # 3. Save the files.
+        # 3. Erase any previous config files to avoid stale configs
+        for fp in (pinout_filepath, peripheral_filepath, preset_filepath):
+            try:
+                if os.path.exists(fp):
+                    os.remove(fp)
+            except Exception:
+                # Non-fatal: continue attempting to write fresh files below
+                pass
+
+        # 4. Always (re)create all three files
         with open(pinout_filepath, "w", encoding="utf-8") as f:
             json.dump(pinout_data, f, indent=2, ensure_ascii=False)
-        
-        # Only save the settings file if there are any peripheral configurations.
-        if peripheral_data:
-            with open(peripheral_filepath, "w", encoding="utf-8") as f:
-                json.dump(peripheral_data, f, indent=2, ensure_ascii=False)
-        
-        if preset_data:
-            with open(preset_filepath, "w", encoding="utf-8") as f:
-                json.dump(preset_data, f, indent=2, ensure_ascii=False)
 
-        messagebox.showinfo("Export Successful", f"Configuration files saved successfully to:\n{folder_path}")
+        with open(peripheral_filepath, "w", encoding="utf-8") as f:
+            json.dump(peripheral_data or {}, f, indent=2, ensure_ascii=False)
+
+        with open(preset_filepath, "w", encoding="utf-8") as f:
+            json.dump(preset_data or {}, f, indent=2, ensure_ascii=False)
+
+        messagebox.showinfo("Export Successful", (
+            "Configuration files recreated successfully in:\n" + folder_path +
+            "\n\nFiles:\n- pinout_config.json\n- peripheral_settings.json\n- preset_settings.json"
+        ))
     except Exception as e:
         messagebox.showerror("Export Error", str(e))
 
@@ -236,14 +245,21 @@ def generate_files(app):
             raw = json.load(f)
             # Accepts both list (legacy) and new dict {"cases":[...]}
             if isinstance(raw, list):
-                preset_settings = {"cases": raw}
+                # Only use if list is not empty
+                if raw:
+                    preset_settings = {"cases": raw}
             elif isinstance(raw, dict):
                 # Ensure "cases" key
                 if "cases" in raw and isinstance(raw["cases"], list):
-                    preset_settings = raw
-                else:
-                    # Tolerant: if it doesn't have "cases" but is a valid single case dict
-                    preset_settings = {"cases": [raw]}
+                    # Only use if cases list is not empty
+                    if raw["cases"]:
+                        preset_settings = raw
+                elif raw:
+                    # Only treat as single case if dict has meaningful content
+                    # Check if dict has any non-empty values
+                    if any(v for v in raw.values() if v):
+                        preset_settings = {"cases": [raw]}
+                # If raw is empty dict {}, preset_settings stays {}
     except FileNotFoundError:
         preset_settings = {}
 
