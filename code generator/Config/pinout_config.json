@@ -3,22 +3,13 @@
   "microcontroller": "STM32G474RE",
   "gpio": [
     {
-      "name": "GY521_SCL",
-      "port": "GPIOB",
-      "pin": 8,
-      "mode": "AF_OD",
-      "pull": "PULLUP",
-      "speed": "VERY_HIGH",
-      "alternate_fn": "GPIO_AF4_I2C1"
-    },
-    {
-      "name": "GY521_SDA",
-      "port": "GPIOB",
-      "pin": 9,
-      "mode": "AF_OD",
-      "pull": "PULLUP",
-      "speed": "VERY_HIGH",
-      "alternate_fn": "GPIO_AF4_I2C1"
+      "name": "POT_ADC",
+      "port": "GPIOA",
+      "pin": 0,
+      "mode": "ANALOG",
+      "pull": "NOPULL",
+      "speed": "LOW",
+      "alternate_fn": ""
     },
     {
       "name": "DEBUG_TX",

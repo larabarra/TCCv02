@@ -1,11 +1,11 @@
 {
   "cases": [
     {
-      "input_key": "GY-521 Sensor",
+      "input_key": "Potentiometer (ADC)",
       "output_key": "UART",
       "processing": {
-        "enabled": false,
-        "formula": ""
+        "enabled": true,
+        "formula": "value*15"
       },
       "threshold": {
         "enabled": false,
@@ -13,19 +13,9 @@
       },
       "peripheral_settings": {
         "input_peripheral": {
-          "type": "I2C",
-          "instance": "I2C1",
-          "settings": {
-            "clockSpeed": "100 kHz (Standard)",
-            "addressingMode": "7-bit",
-            "transferMode": "Polling",
-            "devices": [
-              {
-                "name": "GY521_MPU6050",
-                "address": "0x68"
-              }
-            ]
-          }
+          "type": "ADC",
+          "instance": "ADC1",
+          "settings": {}
         },
         "output_peripheral": {
           "type": "UART",

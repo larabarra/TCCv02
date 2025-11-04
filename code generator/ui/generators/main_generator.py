@@ -58,6 +58,7 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_s
         "gpio_configs": [],
         "i2c_interfaces": [],
         "uart_interfaces": [],
+        "adc_interfaces": [],
         "gpio_example_needed": False,
         "i2c_example_needed": False,
         "uart_example_needed": False,
@@ -138,8 +139,6 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_s
                 case["input_type"] = "digital_in"
             elif "dht11" in input_key:
                 case["input_type"] = "dht11"
-            elif "ky-013" in input_key or "ky013" in input_key:
-                case["input_type"] = "ky013"
             else:
                 case["input_type"] = "unknown"
             
@@ -210,6 +209,20 @@ def generate_main_files(pinout_config: dict, peripheral_settings: dict, preset_s
                         "num": _get_digits(instance),
                         "settings": settings
                     })
+            
+            # Check if any case uses ADC (potentiometer)
+            uses_adc = any(
+                "potentiometer" in case.get("input_key", "").lower()
+                for case in context["preset_cases"]
+            )
+            
+            if uses_adc:
+                # Add ADC1 interface
+                context["adc_interfaces"].append({
+                    "type": "ADC",
+                    "instance": "ADC1",
+                    "num": "1"
+                })
 
     # 4. Render and save both main.c and main.h
     main_c_path = _render_and_save(TEMPLATE_C_NAME, context, OUT_SRC_PATH)

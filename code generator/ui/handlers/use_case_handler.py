@@ -6,12 +6,12 @@ import utils
 # ============================ UI helpers ============================
 
 def toggle_formula_field(app, event=None):
-    """Shows/enables the formula field only for ADC-related inputs (Potentiometer, KY-013)."""
+    """Shows/enables the formula field only for ADC-related inputs (Potentiometer)."""
     if hasattr(app, "cmb_preset_input") and hasattr(app, "var_convert") and hasattr(app, "ent_formula") and hasattr(app, "chk_convert"):
         if app.cmb_preset_input and app.var_convert and app.ent_formula and app.chk_convert:
             selected_input = app.cmb_preset_input.get()
             # Only ADC-related inputs can use formulas
-            is_adc = "Potentiometer" in selected_input or "KY-013" in selected_input or "KY013" in selected_input
+            is_adc = "Potentiometer" in selected_input
             
             if is_adc:
                 # Show the checkbox and formula field for ADC inputs
@@ -31,14 +31,14 @@ def toggle_threshold_field(app, event=None):
     """Shows/hides the threshold field based on the selected input AND output.
     Threshold is only available when:
     - Output is Digital Output (LED)
-    - AND Input is ADC-based (Potentiometer, KY-013)
+    - AND Input is ADC-based (Potentiometer)
     """
     if hasattr(app, "cmb_preset_output") and hasattr(app, "frm_threshold") and app.cmb_preset_output and app.frm_threshold:
         selected_output = app.cmb_preset_output.get()
         selected_input = app.cmb_preset_input.get() if hasattr(app, "cmb_preset_input") and app.cmb_preset_input else ""
         
         # Threshold only for Digital Output (LED) with ADC inputs
-        adc_inputs = ["Potentiometer (ADC)", "KY-013 Analog Temp Sensor"]
+        adc_inputs = ["Potentiometer (ADC)"]
         is_digital_output = selected_output == "Digital Output (LED)"
         is_adc_input = selected_input in adc_inputs
         
@@ -54,8 +54,7 @@ def update_valid_outputs(app, event=None):
     
     Valid combinations:
     - Digital Input → Digital Output (LED) only
-    - Potentiometer (ADC) → Digital Output (LED) only (with threshold)
-    - KY-013 → Digital Output (LED) only (with threshold)
+    - Potentiometer (ADC) → Digital Output (LED) or UART (for testing/debugging)
     - GY-521, DHT11 (sensors) → LCD or UART only
     """
     if not hasattr(app, "cmb_preset_input") or not hasattr(app, "cmb_preset_output"):
@@ -66,8 +65,7 @@ def update_valid_outputs(app, event=None):
     # Define valid outputs for each input type
     output_rules = {
         "Digital Input": ["Digital Output (LED)"],
-        "Potentiometer (ADC)": ["Digital Output (LED)"],
-        "KY-013 Analog Temp Sensor": ["Digital Output (LED)"],
+        "Potentiometer (ADC)": ["Digital Output (LED)", "UART"],
         "GY-521 Sensor": ["LCD 20x4 (I2C)", "UART"],
         "DHT11 Humidity & Temp Sensor": ["LCD 20x4 (I2C)", "UART"],
     }
@@ -193,6 +191,10 @@ def _add_pin_from_config(app, pin_config, parent_mapping) -> bool:
         afs = app.mcu_data.get("tim_af_mapping", {}).get(p_instance, {}) if hasattr(app, "mcu_data") else {}
         afn = afs.get(p_pin, "")  # Store full AF constant
 
+    elif p_type.upper() == "ADC":
+        # ADC pins must be in ANALOG mode
+        mode, pull, speed = "ANALOG", "NOPULL", "LOW"
+
     elif p_type.upper() == "GPIO":
         # Simple GPIO: respects parent overrides (if provided)
         mode = parent_mapping.get("mode", mode)
@@ -241,8 +243,7 @@ def apply_use_case(app):
     # Validate input/output combination
     valid_combinations = {
         "Digital Input": ["Digital Output (LED)"],
-        "Potentiometer (ADC)": ["Digital Output (LED)"],
-        "KY-013 Analog Temp Sensor": ["Digital Output (LED)"],
+        "Potentiometer (ADC)": ["Digital Output (LED)", "UART"],
         "GY-521 Sensor": ["LCD 20x4 (I2C)", "UART"],
         "DHT11 Humidity & Temp Sensor": ["LCD 20x4 (I2C)", "UART"],
     }
@@ -343,7 +344,7 @@ def apply_use_case(app):
         output_key = app.cmb_preset_output.get()
         input_key = app.cmb_preset_input.get()
         # Threshold only enabled for Digital Output (LED) with ADC inputs
-        adc_inputs = ["Potentiometer (ADC)", "KY-013 Analog Temp Sensor"]
+        adc_inputs = ["Potentiometer (ADC)"]
         is_digital_output = output_key == "Digital Output (LED)"
         is_adc_input = input_key in adc_inputs
         threshold_enabled = is_digital_output and is_adc_input

@@ -10,6 +10,7 @@ import os
 from . import gpio_generator
 from . import i2c_generator
 from . import uart_generator
+from . import adc_generator
 from . import main_generator
 from . import presets_generator
 
@@ -123,7 +124,32 @@ def generate_project_files(pinout_config: dict, peripheral_settings: dict, prese
     except Exception as e:
         print(f"[UART] generation error: {e}")
 
-    # 4) PRESETS (only if "cases" exist)
+    # 4) ADC (if potentiometer is used in presets)
+    try:
+        ps = preset_settings or {}
+        cases = ps.get("cases", []) if isinstance(ps, dict) else []
+        has_potentiometer = False
+        for case in cases:
+            input_key = case.get("input_key", "").lower()
+            if "potentiometer" in input_key:
+                has_potentiometer = True
+                break
+        
+        if has_potentiometer:
+            print("--- Processing: ADC (for Potentiometer) ---")
+            # Get paths
+            script_dir = Path(__file__).parent.parent.parent  # Navigate to code generator root
+            template_dir = script_dir / "TEMPLATES"
+            project_root = script_dir.parent  # Navigate to TCCv02
+            output_dir_inc = project_root / "Core" / "Inc"
+            output_dir_src = project_root / "Core" / "Src"
+            
+            files_adc = adc_generator.generate_adc_files(str(output_dir_inc), str(output_dir_src), str(template_dir))
+            if files_adc: all_generated_files.extend(files_adc)
+    except Exception as e:
+        print(f"[ADC] generation error: {e}")
+
+    # 5) PRESETS (only if "cases" exist)
     try:
         ps = preset_settings or {}
         cases = ps.get("cases", []) if isinstance(ps, dict) else []
@@ -205,7 +231,7 @@ def _update_hal_config(peripheral_settings: dict, preset_settings: dict | None =
         for case in cases:
             # Check input types
             input_key = case.get("input_key", "").lower()
-            if "potentiometer" in input_key or "ky-013" in input_key or "ky013" in input_key:
+            if "potentiometer" in input_key:
                 modules_to_enable.add("HAL_ADC_MODULE_ENABLED")
             
             # Check output types  

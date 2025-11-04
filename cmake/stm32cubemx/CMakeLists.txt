@@ -24,6 +24,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gpio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/i2c.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/uart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/adc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/presets_in.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/presets_out.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/main.c
@@ -46,6 +47,8 @@ set(STM32_Drivers_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ramfunc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_exti.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma_ex.c

@@ -148,7 +148,6 @@ def generate_presets_files(
     has_gy521 = False
     has_din = False
     has_dht11 = False
-    has_ky013 = False
     has_pot = False
     
     has_lcd = False
@@ -171,8 +170,6 @@ def generate_presets_files(
             has_din = True
         if "DHT11" in input_key:
             has_dht11 = True
-        if "KY-013" in input_key or "KY013" in input_key:
-            has_ky013 = True
         if "Potentiometer" in input_key or "POT" in input_key:
             has_pot = True
             
@@ -224,7 +221,6 @@ def generate_presets_files(
         has_gy521 = bool(inputs.get("GY-521 Sensor"))
         has_din = bool(inputs.get("Digital Input"))
         has_dht11 = bool(inputs.get("DHT11 Humidity & Temp Sensor"))
-        has_ky013 = bool(inputs.get("KY-013 Analog Temp Sensor"))
         has_pot = bool(inputs.get("Potentiometer (ADC)"))
         
         has_lcd = bool(outputs.get("LCD 20x4 (I2C)"))
@@ -233,7 +229,7 @@ def generate_presets_files(
         has_dout = bool(outputs.get("Digital Output (LED)"))
     
     # Early return if no presets are configured at all
-    has_any_input = has_gy521 or has_din or has_dht11 or has_ky013 or has_pot
+    has_any_input = has_gy521 or has_din or has_dht11 or has_pot
     has_any_output = has_lcd or has_uart or has_pwm or has_dout
     if not cases and not has_any_input and not has_any_output:
         # No presets configured, don't generate preset files
@@ -274,7 +270,6 @@ def generate_presets_files(
             "gy521": has_gy521,
             "din": has_din,
             "dht11": has_dht11,
-            "ky013": has_ky013,
             "pot": has_pot,
         },
         # For .c template
@@ -284,7 +279,6 @@ def generate_presets_files(
         "din_pin": din_pin,
         "include_dht11": has_dht11,
         "dht_pin": dht_pin,
-        "include_ky013": has_ky013,
         "include_pot": has_pot,
     }
     

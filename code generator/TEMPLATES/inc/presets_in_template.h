@@ -15,11 +15,11 @@ extern "C" {
 #endif
 
 #include "main.h"
-{% if IN.gy521 or IN.dht11 or IN.ky013 or IN.pot %}
+{% if IN.gy521 %}
 #include "i2c.h"
 {% endif %}
-{% if IN.ky013 or IN.pot %}
-#include "adc.h"
+{% if IN.pot %}
+#include "stm32g4xx_hal_adc.h"
 {% endif %}
 
 {% if IN.dht11 %}
@@ -50,9 +50,15 @@ uint8_t DIN_Read(GPIO_TypeDef *port, uint16_t pin);
 DHT11_Data_t DHT11_Read(void);
 {% endif %}
 
-{% if IN.ky013 or IN.pot %}
+{% if IN.pot %}
 /* ADC helpers for analog sensors */
 HAL_StatusTypeDef ADC_Read_Channel(ADC_HandleTypeDef *hadc, uint32_t channel, uint16_t *raw);
+{% endif %}
+
+{% if IN.pot %}
+/* Potentiometer ADC functions */
+HAL_StatusTypeDef POT_ReadRaw(ADC_HandleTypeDef* hadc, uint32_t channel, uint16_t* out_raw);
+float POT_RawToRatio(uint16_t raw);
 {% endif %}
 
 #ifdef __cplusplus

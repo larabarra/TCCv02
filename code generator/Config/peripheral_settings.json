@@ -1,17 +1,4 @@
 {
-  "I2C": {
-    "I2C1": {
-      "clockSpeed": 100000,
-      "addressingMode": "I2C_ADDRESSINGMODE_7BIT",
-      "transferMode": "POLLING",
-      "devices": [
-        {
-          "name": "GY521_MPU6050",
-          "address": 104
-        }
-      ]
-    }
-  },
   "UART": {
     "UART2": {
       "baudRate": 115200,
