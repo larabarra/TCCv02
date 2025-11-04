@@ -248,33 +248,23 @@ DHT11_Data_t DHT11_Read(void)
 {% endif %}
 {% endif %}
 
-{% if include_ky013 or include_pot %}
-/* =========================
- *  KY-013 (ADC) and Potentiometer (ADC)
- * ========================= */
-{% if include_ky013 %}
-HAL_StatusTypeDef KY013_ReadRaw(ADC_HandleTypeDef* hadc, uint32_t channel, uint16_t* out_raw)
-{
-    if (!hadc || !out_raw) return HAL_ERROR;
-    HAL_ADC_ConfigChannel(hadc, &(ADC_ChannelConfTypeDef){ .Channel=channel, .Rank=ADC_REGULAR_RANK_1, .SamplingTime=ADC_SAMPLETIME_47CYCLES_5 });
-    if (HAL_ADC_Start(hadc) != HAL_OK) return HAL_ERROR;
-    if (HAL_ADC_PollForConversion(hadc, 10) != HAL_OK) return HAL_ERROR;
-    *out_raw = (uint16_t)HAL_ADC_GetValue(hadc);
-    HAL_ADC_Stop(hadc);
-    return HAL_OK;
-}
-float KY013_RawToVoltage(uint16_t raw, float vref)
-{
-    return ( (float)raw / 4095.0f ) * vref;
-}
-{% endif %}
-{% endif %}
-
 {% if include_pot %}
+/* =========================
+ *  Potentiometer (ADC)
+ * ========================= */
 HAL_StatusTypeDef POT_ReadRaw(ADC_HandleTypeDef* hadc, uint32_t channel, uint16_t* out_raw)
 {
     if (!hadc || !out_raw) return HAL_ERROR;
-    HAL_ADC_ConfigChannel(hadc, &(ADC_ChannelConfTypeDef){ .Channel=channel, .Rank=ADC_REGULAR_RANK_1, .SamplingTime=ADC_SAMPLETIME_47CYCLES_5 });
+    
+    ADC_ChannelConfTypeDef sConfig = {0};
+    sConfig.Channel = channel;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.OffsetNumber = ADC_OFFSET_NONE;
+    sConfig.Offset = 0;
+    
+    if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK) return HAL_ERROR;
     if (HAL_ADC_Start(hadc) != HAL_OK) return HAL_ERROR;
     if (HAL_ADC_PollForConversion(hadc, 10) != HAL_OK) return HAL_ERROR;
     *out_raw = (uint16_t)HAL_ADC_GetValue(hadc);

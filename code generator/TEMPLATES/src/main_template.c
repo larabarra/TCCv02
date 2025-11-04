@@ -27,6 +27,9 @@
 {% if uart_interfaces %}
 #include "uart.h"
 {% endif %}
+{% if adc_interfaces %}
+#include "adc.h"
+{% endif %}
 {% if preset_example_needed %}
 #include "presets_in.h"
 #include "presets_out.h"
@@ -304,14 +307,15 @@ void Presets_Process(void)
   {% elif case.input_type == "potentiometer" %}
   // Read potentiometer value via ADC
   uint16_t raw_value = 0;
+  float processed_value = 0.0f;
   if (POT_ReadRaw(&hadc1, ADC_CHANNEL_0, &raw_value) == HAL_OK)
   {
     float value = POT_RawToRatio(raw_value);  // Convert to 0.0-1.0 ratio
     {% if case.get("processing", {}).get("enabled") %}
     // Apply formula: {{ case.get("processing", {}).get("formula", "") }}
-    float processed_value = value {{ case.get("processing", {}).get("formula", "") }};
+    processed_value = {{ case.get("processing", {}).get("formula", "") }};
     {% else %}
-    float processed_value = value * 1000.0f;  // Default: scale to 0-1000
+    processed_value = value * 1000.0f;  // Default: scale to 0-1000
     {% endif %}
     
   {% elif case.input_type == "digital_in" %}
@@ -335,17 +339,11 @@ void Presets_Process(void)
     {% endif %}
   {% endif %}
   
-  {% elif case.input_type == "ky013" %}
-  // Read KY-013 temperature sensor via ADC
-  uint16_t raw_temp = 0;
-  if (KY013_ReadTemp(&hadc1, &raw_temp) == HAL_OK)
-  {
-    float processed_value = KY013_TempConversion(raw_temp);
-    {% if case.get("processing", {}).get("enabled") %}
-    // Apply formula: {{ case.get("processing", {}).get("formula", "") }}
-    processed_value = processed_value {{ case.get("processing", {}).get("formula", "") }};
-    {% endif %}
+  {% endif %}
   
+  // Close the input reading block for sensors that needed it
+  {% if case.input_type == "potentiometer" or (case.input_type == "dht11" and case.output_type != "lcd") %}
+  }
   {% endif %}
   
   {% if case.output_type in ["digital_out", "pwm"] %}
@@ -353,19 +351,14 @@ void Presets_Process(void)
   {% if case.input_type == "digital_in" %}
   // Digital Input: LED ON when button pressed (active LOW with pull-up)
   bool should_activate = (din_state == GPIO_PIN_RESET);
-  {% elif case.get("threshold", {}).get("enabled") and case.input_type in ["potentiometer", "ky013"] %}
-  // Threshold check for ADC-based inputs (Potentiometer, KY-013)
+  {% elif case.get("threshold", {}).get("enabled") and case.input_type == "potentiometer" %}
+  // Threshold check for ADC-based inputs (Potentiometer)
   uint16_t threshold = {{ case.get("threshold", {}).get("value", "1000") }};
   bool should_activate = processed_value > threshold;
   {% else %}
   // Always activate for sensors without threshold
   bool should_activate = true;
   {% endif %}
-  {% endif %}
-  
-  // Close the input reading block for sensors that needed it
-  {% if (case.input_type == "potentiometer" or case.input_type == "ky013") or (case.input_type == "dht11" and case.output_type != "lcd") %}
-  }
   {% endif %}
   
   // Process output based on type
@@ -454,6 +447,14 @@ void Presets_Process(void)
   {
     OUT_UART_Print("DHT11_ERROR\r\n");
   }
+  
+  {% elif case.input_type == "potentiometer" %}
+  // Send potentiometer ADC value via UART
+  int16_t proc_int = (int16_t)(processed_value);
+  int16_t proc_dec = (int16_t)((processed_value - proc_int) * 100.0f);
+  snprintf(buffer, sizeof(buffer), "ADC:%d Raw:%d.%02d\r\n", 
+           raw_value, proc_int, abs(proc_dec));
+  OUT_UART_Print(buffer);
   
   {% else %}
   // Generic UART output

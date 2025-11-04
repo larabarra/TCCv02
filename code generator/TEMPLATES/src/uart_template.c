@@ -18,8 +18,7 @@ UART_HandleTypeDef huart{{ uart.num }};
 void MX_UART_Init(void)
 {
 {% for uart in uart_interfaces %}
-    /* {{ uart.interface }} */
-    __HAL_RCC_{{ uart.interface }}_CLK_ENABLE();  // clock do PERIFÉRICO
+    /* {{ uart.interface }} - Clock enable moved to HAL_UART_MspInit */
 
     huart{{ uart.num }}.Instance        = {{ uart.interface }};
     huart{{ uart.num }}.Init.BaudRate   = {{ uart.baud_rate }};
@@ -29,6 +28,10 @@ void MX_UART_Init(void)
     huart{{ uart.num }}.Init.Mode       = {{ uart.mode }};
     huart{{ uart.num }}.Init.HwFlowCtl  = {{ uart.hw_flow_ctl }};
     huart{{ uart.num }}.Init.OverSampling = {{ uart.oversampling }};
+    huart{{ uart.num }}.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    huart{{ uart.num }}.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+    huart{{ uart.num }}.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    huart{{ uart.num }}.FifoMode = UART_FIFOMODE_DISABLE;
 
     if (HAL_UART_Init(&huart{{ uart.num }}) != HAL_OK)
     {
@@ -37,11 +40,28 @@ void MX_UART_Init(void)
 {% endfor %}
 }
 
-/* MSP: NÃO configurar GPIO aqui (pinmux e __HAL_RCC_GPIOx_CLK_ENABLE ficam no gpio.c) */
+/* MSP: GPIO configuration for UART */
 void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
-    (void)uartHandle;
-    /* Intencionalmente vazio. Se quiser NVIC/DMA, configure aqui. */
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    
+    if(uartHandle->Instance==USART2)
+    {
+        /* USART2 clock enable */
+        __HAL_RCC_USART2_CLK_ENABLE();
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        
+        /**USART2 GPIO Configuration    
+        PA2     ------> USART2_TX
+        PA3     ------> USART2_RX 
+        */
+        GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    }
 }
 
 /*

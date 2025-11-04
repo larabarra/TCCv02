@@ -1,7 +1,7 @@
 # MyProject
 
 **Microcontroller:** STM32G474RE  
-**Generated:** 2025-10-30 23:58:59
+**Generated:** 2025-11-03 22:54:34
 
 ---
 
@@ -9,20 +9,11 @@
 
 | Pin Name | STM32 Pin | Port | Mode | Pull | Speed | Alternate Function |
 |----------|-----------|------|------|------|-------|-------------------|
-| GY521_SCL | **B8** | GPIOB | AF_OD | PULLUP | VERY_HIGH | GPIO_AF4_I2C1 |
-| GY521_SDA | **B9** | GPIOB | AF_OD | PULLUP | VERY_HIGH | GPIO_AF4_I2C1 |
+| POT_ADC | **A0** | GPIOA | ANALOG | NOPULL | LOW |  |
 | DEBUG_TX | **A2** | GPIOA | AF_PP | NOPULL | VERY_HIGH | GPIO_AF7_USART2 |
 | DEBUG_RX | **A3** | GPIOA | AF_PP | NOPULL | VERY_HIGH | GPIO_AF7_USART2 |
 
 ### Peripheral Configuration
-
-#### I2C (I2C1)
-**Pins:**
-- GY521_SCL → GPIOB8
-- GY521_SDA → GPIOB9
-
-**Connected Devices:**
-- GY521_MPU6050 (Address: 0x68)
 
 #### UART (UART2)
 **Baudrate:** Unknown
@@ -31,10 +22,9 @@
 
 ### Preset Use Cases
 
-**Use Case 1:** `GY-521 Sensor` → `UART`
+**Use Case 1:** `Potentiometer (ADC)` → `UART`
 
-**I2C Input Device:**
-- GY521_MPU6050 at address 0x0x68
+**Processing:** `value*15`
 
 
 ## Build Instructions

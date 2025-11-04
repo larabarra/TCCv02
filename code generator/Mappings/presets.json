@@ -22,14 +22,6 @@
         { "pin_choice": "PA1", "label": "DHT11_DATA", "mode": "OUTPUT_OD", "pull": "NOPULL" }
       ]
     },
-    "KY-013 Analog Temp Sensor": {
-      "direction": "input",
-      "type": "ADC",
-      "instance": "ADC1",
-      "pins": [
-        { "role": "ADC_IN5", "pin_choice": "PA4", "label": "KY013_TEMP_ADC" }
-      ]
-    },
     "Digital Output (LED)": {
       "direction": "output",
       "type": "GPIO",
